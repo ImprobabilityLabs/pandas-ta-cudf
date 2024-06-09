@@ -1,6 +1,3 @@
-Here is the refactored code that incorporates CuDF for GPU processing:
-
-```
 name = "pandas_ta"
 """
 .. moduleauthor:: Kevin Johnson

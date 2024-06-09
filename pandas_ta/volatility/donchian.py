@@ -80,5 +80,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.DataFrame: lower, mid, upper columns.
+    cudf.DataFrame: lower, mid, upper columns.
 """

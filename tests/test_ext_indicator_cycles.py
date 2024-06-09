@@ -1,6 +1,6 @@
 from cudf.core.series import Series
 from .config import sample_data
-from .context import cudf_ta
+from .context import pandas_ta
 
 from unittest import TestCase
 from cudf import DataFrame

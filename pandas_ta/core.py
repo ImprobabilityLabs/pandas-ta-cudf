@@ -1,71 +1,27 @@
 from dataclasses import dataclass, field
-
-
 from multiprocessing import cpu_count, Pool
-
-
 from pathlib import Path
-
-
 from time import perf_counter
-
-
 from typing import List, Tuple
-
-
 from warnings import simplefilter
-
-
 import pandas as pd
-
-
 from numpy import log10 as npLog10
-
-
 from numpy import ndarray as npNdarray
-
-
 from pandas.core.base import PandasObject
-
-
 from pandas_ta import Category, Imports, version
-
-
 from pandas_ta.candles.cdl_pattern import ALL_PATTERNS
-
-
 from pandas_ta.candles import *
-
-
 from pandas_ta.cycles import *
-
-
 from pandas_ta.momentum import *
-
-
 from pandas_ta.overlap import *
-
-
 from pandas_ta.performance import *
-
-
 from pandas_ta.statistics import *
-
-
 from pandas_ta.trend import *
-
-
 from pandas_ta.volatility import *
-
-
 from pandas_ta.volume import *
-
-
 from pandas_ta.utils import *
 
-
 df = pd.DataFrame()
-
 
 @dataclass
 class Strategy:

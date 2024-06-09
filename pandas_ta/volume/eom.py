@@ -1,4 +1,3 @@
-```
 # -*- coding: utf-8 -*-
 import cudf
 from pandas_ta.overlap import hl2, sma

@@ -73,3 +73,47 @@ def bbands(close, length=None, std=None, ddof=0, mamode=None, talib=None, offset
     bbandsdf.category = mid.category
 
     return bbandsdf
+
+bbands.__doc__ = \
+"""Bollinger Bands (BBANDS)
+
+A popular volatility indicator by John Bollinger.
+
+Sources:
+    https://www.tradingview.com/wiki/Bollinger_Bands_(BB)
+
+Calculation:
+    Default Inputs:
+        length=5, std=2, mamode="sma", ddof=0
+    EMA = Exponential Moving Average
+    SMA = Simple Moving Average
+    STDEV = Standard Deviation
+    stdev = STDEV(close, length, ddof)
+    if "ema":
+        MID = EMA(close, length)
+    else:
+        MID = SMA(close, length)
+
+    LOWER = MID - std * stdev
+    UPPER = MID + std * stdev
+
+    BANDWIDTH = 100 * (UPPER - LOWER) / MID
+    PERCENT = (close - LOWER) / (UPPER - LOWER)
+
+Args:
+    close (cudf.Series): Series of 'close's
+    length (int): The short period. Default: 5
+    std (int): The long period. Default: 2
+    ddof (int): Degrees of Freedom to use. Default: 0
+    mamode (str): See ```help(ta.ma)```. Default: 'sma'
+    talib (bool): If TA Lib is installed and talib is True, Returns the TA Lib
+        version. Default: True
+    offset (int): How many periods to offset the result. Default: 0
+
+Kwargs:
+    fillna (value, optional): pd.DataFrame.fillna(value)
+    fill_method (value, optional): Type of fill method
+
+Returns:
+    cudf.DataFrame: lower, mid, upper, bandwidth, and percent columns.
+"""

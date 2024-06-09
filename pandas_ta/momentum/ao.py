@@ -1,5 +1,3 @@
-Here is the refactored code to work with CuDF and other CUDA-related libraries:
-```
 # -*- coding: utf-8 -*-
 import cudf
 from pandas_ta.overlap import sma

@@ -1,15 +1,7 @@
 from .config import sample_data
-
-
 from .context import pandas_ta
-
-
 from unittest import skip, TestCase
-
-
-from pandas import DataFrame
-
-
+from cudf import DataFrame
 class TestOverlapExtension(TestCase):
 
     @classmethod

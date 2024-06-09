@@ -5,13 +5,13 @@ import cudf
 from cuml.common.input_utils import get_input_device_type
 from cuml.dataloader import Dataset
 from cuml.metrics import get_metric
-
-cudf.import_dask()
-
 from cudf.dataframe import DataFrame as cuDF
 from cudf.series import Series as cuSeries
 from cudf.core.index import DatetimeIndex as cuDatetimeIndex
 from cudf.core.index import RangeIndex as cuRangeIndex
+
+cudf.import_dask()
+
 
 def _camelCase2Title(x: str):
     return re_.sub("([a-z])([A-Z])","\g<1> \g<2>", x).title()

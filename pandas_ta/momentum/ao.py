@@ -72,5 +72,3 @@ Kwargs:
 Returns:
     cudf.Series: New feature generated.
 """
-```
-Note that I've replaced the `pd.Series` imports with `cudf.Series` and made the necessary changes to work with CuDF. The code should work exactly as it did before, but now taking advantage of GPU processing using CuDF.

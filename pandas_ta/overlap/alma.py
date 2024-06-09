@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
-from numpy import exp as npExp
-from numpy import nan as npNaN
-from pandas import Series
-from pandas_ta.utils import get_offset, verify_series
-
+import cudf
+import cupy as cp
+from cupy.exp import exp as cpExp
 
 def alma(close, length=None, sigma=None, distribution_offset=None, offset=None, **kwargs):
     """Indicator: Arnaud Legoux Moving Average (ALMA)"""
@@ -11,7 +9,7 @@ def alma(close, length=None, sigma=None, distribution_offset=None, offset=None, 
     length = int(length) if length and length > 0 else 10
     sigma = float(sigma) if sigma and sigma > 0 else 6.0
     distribution_offset = float(distribution_offset) if distribution_offset and distribution_offset > 0 else 0.85
-    close = verify_series(close, length)
+    close = cudf.Series(close)
     offset = get_offset(offset)
 
     if close is None: return
@@ -19,24 +17,22 @@ def alma(close, length=None, sigma=None, distribution_offset=None, offset=None, 
     # Pre-Calculations
     m = distribution_offset * (length - 1)
     s = length / sigma
-    wtd = list(range(length))
-    for i in range(0, length):
-        wtd[i] = npExp(-1 * ((i - m) * (i - m)) / (2 * s * s))
+    wtd = cp.arange(length)
+    wtd = cpExp(-1 * ((wtd - m) * (wtd - m)) / (2 * s * s))
 
     # Calculate Result
-    result = [npNaN for _ in range(0, length - 1)] + [0]
+    result = [cp.nan for _ in range(0, length - 1)] + [0]
     for i in range(length, close.size):
         window_sum = 0
         cum_sum = 0
         for j in range(0, length):
-            # wtd = math.exp(-1 * ((j - m) * (j - m)) / (2 * s * s))        # moved to pre-calc for efficiency
             window_sum = window_sum + wtd[j] * close.iloc[i - j]
             cum_sum = cum_sum + wtd[j]
 
         almean = window_sum / cum_sum
-        result.append(npNaN) if i == length else result.append(almean)
+        result.append(cp.nan) if i == length else result.append(almean)
 
-    alma = Series(result, index=close.index)
+    alma = cudf.Series(result, index=close.index)
 
     # Offset
     if offset != 0:
@@ -73,7 +69,7 @@ Calculation:
     refer to provided source
 
 Args:
-    close (pd.Series): Series of 'close's
+    close (cudf.Series): Series of 'close's
     length (int): It's period, window size. Default: 10
     sigma (float): Smoothing value. Default 6.0
     distribution_offset (float): Value to offset the distribution min 0
@@ -85,5 +81,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cudf.Series: New feature generated.
 """

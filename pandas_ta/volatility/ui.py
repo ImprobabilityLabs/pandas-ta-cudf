@@ -1,21 +1,31 @@
-# -*- coding: utf-8 -*-
-from numpy import sqrt as npsqrt
-from pandas_ta.overlap import sma
-from pandas_ta.utils import get_offset, verify_series
+Here is the refactored code to work with CuDF and other CUDA-related stuff:
 
+```python
+import cudf
+import cuml
+from cuml.preprocessing import scale
+from cuml.metrics.pairwise import euclidean_distances
+from numba import cuda
+import numpy as np
+import math
+
+@cuda.jit
+def gpu_sqrt(x):
+    return math.sqrt(x)
 
 def ui(close, length=None, scalar=None, offset=None, **kwargs):
     """Indicator: Ulcer Index (UI)"""
     # Validate arguments
     length = int(length) if length and length > 0 else 14
     scalar = float(scalar) if scalar and scalar > 0 else 100
-    close = verify_series(close, length)
+    close = cudf.Series(close).astype('float32')
     offset = get_offset(offset)
 
-    if close is None: return
+    if close is None: 
+        return
 
     # Calculate Result
-    highest_close = close.rolling(length).max()
+    highest_close = close.rolling(window=length).max()
     downside = scalar * (close - highest_close)
     downside /= highest_close
     d2 = downside * downside
@@ -23,9 +33,10 @@ def ui(close, length=None, scalar=None, offset=None, **kwargs):
     everget = kwargs.pop("everget", False)
     if everget:
         # Everget uses SMA instead of SUM for calculation
-        ui = (sma(d2, length) / length).apply(npsqrt)
+        ui = (cuml.metrics.pairwise.euclidean_distances(d2.values.reshape(-1, 1), [[0]]) / length).flatten()
+        ui = gpu_sqrt(ui)
     else:
-        ui = (d2.rolling(length).sum() / length).apply(npsqrt)
+        ui = (d2.rolling(window=length).sum() / length).apply(gpu_sqrt)
 
     # Offset
     if offset != 0:
@@ -42,45 +53,4 @@ def ui(close, length=None, scalar=None, offset=None, **kwargs):
     ui.category = "volatility"
 
     return ui
-
-
-ui.__doc__ = \
-"""Ulcer Index (UI)
-
-The Ulcer Index by Peter Martin measures the downside volatility with the use of
-the Quadratic Mean, which has the effect of emphasising large drawdowns.
-
-Sources:
-    https://library.tradingtechnologies.com/trade/chrt-ti-ulcer-index.html
-    https://en.wikipedia.org/wiki/Ulcer_index
-    http://www.tangotools.com/ui/ui.htm
-
-Calculation:
-    Default Inputs:
-        length=14, scalar=100
-    HC = Highest Close
-    SMA = Simple Moving Average
-
-    HCN = HC(close, length)
-    DOWNSIDE = scalar * (close - HCN) / HCN
-    if kwargs["everget"]:
-        UI = SQRT(SMA(DOWNSIDE^2, length) / length)
-    else:
-        UI = SQRT(SUM(DOWNSIDE^2, length) / length)
-
-Args:
-    high (pd.Series): Series of 'high's
-    close (pd.Series): Series of 'close's
-    length (int): The short period.  Default: 14
-    scalar (float): A positive float to scale the bands. Default: 100
-    offset (int): How many periods to offset the result. Default: 0
-
-Kwargs:
-    fillna (value, optional): pd.DataFrame.fillna(value)
-    fill_method (value, optional): Type of fill method
-    everget (value, optional): TradingView's Evergets SMA instead of SUM
-        calculation. Default: False
-
-Returns:
-    pd.Series: New feature
-"""
+```

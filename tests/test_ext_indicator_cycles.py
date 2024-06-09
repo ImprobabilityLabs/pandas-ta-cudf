@@ -1,15 +1,14 @@
-from pandas.core.series import Series
+from cudf.core.series import Series
 from .config import sample_data
-from .context import pandas_ta
+from .context import cudf_ta
 
 from unittest import TestCase
-from pandas import DataFrame
-
+from cudf import DataFrame
 
 class TestCylesExtension(TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.data = sample_data
+        cls.data = sample_data.to_cudf()
 
     @classmethod
     def tearDownClass(cls):

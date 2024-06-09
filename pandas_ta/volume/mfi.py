@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
-from pandas import DataFrame
+import cudf
+from cudf.utils.dtypes import CUDA_FLOAT_TYPES
 from pandas_ta import Imports
 from pandas_ta.overlap import hlc3
 from pandas_ta.utils import get_drift, get_offset, verify_series
-
 
 def mfi(high, low, close, volume, length=None, talib=None, drift=None, offset=None, **kwargs):
     """Indicator: Money Flow Index (MFI)"""
@@ -27,7 +26,7 @@ def mfi(high, low, close, volume, length=None, talib=None, drift=None, offset=No
         typical_price = hlc3(high=high, low=low, close=close)
         raw_money_flow = typical_price * volume
 
-        tdf = DataFrame({"diff": 0, "rmf": raw_money_flow, "+mf": 0, "-mf": 0})
+        tdf = cudf.DataFrame({"diff": [0]*len(high), "rmf": raw_money_flow, "+mf": [0]*len(high), "-mf": [0]*len(high)})
 
         tdf.loc[(typical_price.diff(drift) > 0), "diff"] = 1
         tdf.loc[tdf["diff"] == 1, "+mf"] = raw_money_flow
@@ -57,7 +56,6 @@ def mfi(high, low, close, volume, length=None, talib=None, drift=None, offset=No
 
     return mfi
 
-
 mfi.__doc__ = \
 """Money Flow Index (MFI)
 
@@ -80,10 +78,10 @@ Calculation:
     MFI = money_flow_index = 100 * pmf / (pmf + nmf)
 
 Args:
-    high (pd.Series): Series of 'high's
-    low (pd.Series): Series of 'low's
-    close (pd.Series): Series of 'close's
-    volume (pd.Series): Series of 'volume's
+    high (cuDF.Series): Series of 'high's
+    low (cuDF.Series): Series of 'low's
+    close (cuDF.Series): Series of 'close's
+    volume (cuDF.Series): Series of 'volume's
     length (int): The sum period. Default: 14
     talib (bool): If TA Lib is installed and talib is True, Returns the TA Lib
         version. Default: True
@@ -91,9 +89,9 @@ Args:
     offset (int): How many periods to offset the result. Default: 0
 
 Kwargs:
-    fillna (value, optional): pd.DataFrame.fillna(value)
+    fillna (value, optional): cuDF.Series.fillna(value)
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cuDF.Series: New feature generated.
 """

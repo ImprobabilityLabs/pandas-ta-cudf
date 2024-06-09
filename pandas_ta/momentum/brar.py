@@ -1,7 +1,5 @@
-# -*- coding: utf-8 -*-
-from pandas import DataFrame
+from cudf import DataFrame
 from pandas_ta.utils import get_drift, get_offset, non_zero_range, verify_series
-
 
 def brar(open_, high, low, close, length=None, scalar=None, drift=None, offset=None, **kwargs):
     """Indicator: BRAR (BRAR)"""
@@ -57,7 +55,6 @@ def brar(open_, high, low, close, length=None, scalar=None, drift=None, offset=N
     brardf.category = "momentum"
 
     return brardf
-
 
 brar.__doc__ = \
 """BRAR (BRAR)

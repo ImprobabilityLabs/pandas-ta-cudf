@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-from .ad import ad
+import cudf
 from pandas_ta import Imports
 from pandas_ta.overlap import ema
 from pandas_ta.utils import get_offset, verify_series
@@ -27,8 +26,9 @@ def adosc(high, low, close, volume, open_=None, fast=None, slow=None, talib=None
         adosc = ADOSC(high, low, close, volume, fast, slow)
     else:
         ad_ = ad(high=high, low=low, close=close, volume=volume, open_=open_)
-        fast_ad = ema(close=ad_, length=fast, **kwargs)
-        slow_ad = ema(close=ad_, length=slow, **kwargs)
+        ad_sr = cudf.Series(ad_)
+        fast_ad = ema(close=ad_sr, length=fast, **kwargs)
+        slow_ad = ema(close=ad_sr, length=slow, **kwargs)
         adosc = fast_ad - slow_ad
 
     # Offset

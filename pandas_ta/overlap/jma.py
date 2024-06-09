@@ -1,14 +1,8 @@
-# -*- coding: utf-8 -*-
-from numpy import average as npAverage
-from numpy import nan as npNaN
-from numpy import log as npLog
-from numpy import power as npPower
-from numpy import sqrt as npSqrt
-from numpy import zeros_like as npZeroslike
-from pandas import Series
-from pandas_ta.utils import get_offset, verify_series
+from cudf import Series
+import cusignal 
+from cucim import cpu_enabled
 
-
+@cpu_enabled()
 def jma(close, length=None, phase=None, offset=None, **kwargs):
     """Indicator: Jurik Moving Average (JMA)"""
     # Validate Arguments
@@ -19,9 +13,9 @@ def jma(close, length=None, phase=None, offset=None, **kwargs):
     if close is None: return
 
     # Define base variables
-    jma = npZeroslike(close)
-    volty = npZeroslike(close)
-    v_sum = npZeroslike(close)
+    jma = cusignal.kernels.zeros_like(close)
+    volty = cusignal.kernels.zeros_like(close)
+    v_sum = cusignal.kernels.zeros_like(close)
 
     kv = det0 = det1 = ma2 = 0.0
     jma[0] = ma1 = uBand = lBand = close[0]
@@ -30,9 +24,9 @@ def jma(close, length=None, phase=None, offset=None, **kwargs):
     sum_length = 10
     length = 0.5 * (_length - 1)
     pr = 0.5 if phase < -100 else 2.5 if phase > 100 else 1.5 + phase * 0.01
-    length1 = max((npLog(npSqrt(length)) / npLog(2.0)) + 2.0, 0)
+    length1 = max((cusignal.kernels.log(cusignal.kernels.sqrt(length)) / cusignal.kernels.log(2.0)) + 2.0, 0)
     pow1 = max(length1 - 2.0, 0.5)
-    length2 = length1 * npSqrt(length)
+    length2 = length1 * cusignal.kernels.sqrt(length)
     bet = length2 / (length2 + 1)
     beta = 0.45 * (_length - 1) / (0.45 * (_length - 1) + 2.0)
 
@@ -43,23 +37,23 @@ def jma(close, length=None, phase=None, offset=None, **kwargs):
         # Price volatility
         del1 = price - uBand
         del2 = price - lBand
-        volty[i] = max(abs(del1),abs(del2)) if abs(del1)!=abs(del2) else 0
+        volty[i] = cusignal.kernels.maximum(cusignal.kernels.abs(del1), cusignal.kernels.abs(del2)) if cusignal.kernels.abs(del1)!=cusignal.kernels.abs(del2) else 0
 
         # Relative price volatility factor
         v_sum[i] = v_sum[i - 1] + (volty[i] - volty[max(i - sum_length, 0)]) / sum_length
-        avg_volty = npAverage(v_sum[max(i - 65, 0):i + 1])
+        avg_volty = cusignal.kernels.average(v_sum[max(i - 65, 0):i + 1])
         d_volty = 0 if avg_volty ==0 else volty[i] / avg_volty
-        r_volty = max(1.0, min(npPower(length1, 1 / pow1), d_volty))
+        r_volty = cusignal.kernels.maximum(1.0, cusignal.kernels.minimum(cusignal.kernels.power(length1, 1 / pow1), d_volty))
 
         # Jurik volatility bands
-        pow2 = npPower(r_volty, pow1)
-        kv = npPower(bet, npSqrt(pow2))
+        pow2 = cusignal.kernels.power(r_volty, pow1)
+        kv = cusignal.kernels.power(bet, cusignal.kernels.sqrt(pow2))
         uBand = price if (del1 > 0) else price - (kv * del1)
         lBand = price if (del2 < 0) else price - (kv * del2)
 
         # Jurik Dynamic Factor
-        power = npPower(r_volty, pow1)
-        alpha = npPower(beta, power)
+        power = cusignal.kernels.power(r_volty, pow1)
+        alpha = cusignal.kernels.power(beta, power)
 
         # 1st stage - prelimimary smoothing by adaptive EMA
         ma1 = ((1 - alpha) * price) + (alpha * ma1)
@@ -73,8 +67,8 @@ def jma(close, length=None, phase=None, offset=None, **kwargs):
         jma[i] = jma[i-1] + det1
 
     # Remove initial lookback data and convert to pandas frame
-    jma[0:_length - 1] = npNaN
-    jma = Series(jma, index=close.index)
+    jma[0:_length - 1] = cusignal.kernels.nan
+    jma = Series(jma)
 
     # Offset
     if offset != 0:
@@ -91,33 +85,3 @@ def jma(close, length=None, phase=None, offset=None, **kwargs):
     jma.category = "overlap"
 
     return jma
-
-
-jma.__doc__ = \
-"""Jurik Moving Average Average (JMA)
-
-Mark Jurik's Moving Average (JMA) attempts to eliminate noise to see the "true"
-underlying activity. It has extremely low lag, is very smooth and is responsive
-to market gaps.
-
-Sources:
-    https://c.mql5.com/forextsd/forum/164/jurik_1.pdf
-    https://www.prorealcode.com/prorealtime-indicators/jurik-volatility-bands/
-
-Calculation:
-    Default Inputs:
-        length=7, phase=0
-
-Args:
-    close (pd.Series): Series of 'close's
-    length (int): Period of calculation. Default: 7
-    phase (float): How heavy/light the average is [-100, 100]. Default: 0
-    offset (int): How many lengths to offset the result. Default: 0
-
-Kwargs:
-    fillna (value, optional): pd.DataFrame.fillna(value)
-    fill_method (value, optional): Type of fill method
-
-Returns:
-    pd.Series: New feature generated.
-"""

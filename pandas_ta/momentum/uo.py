@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
-from pandas import DataFrame
+import cudf
 from pandas_ta import Imports
 from pandas_ta.utils import get_drift, get_offset, verify_series
-
 
 def uo(high, low, close, fast=None, medium=None, slow=None, fast_w=None, medium_w=None, slow_w=None, talib=None, drift=None, offset=None, **kwargs):
     """Indicator: Ultimate Oscillator (UO)"""
@@ -28,7 +27,7 @@ def uo(high, low, close, fast=None, medium=None, slow=None, fast_w=None, medium_
         from talib import ULTOSC
         uo = ULTOSC(high, low, close, fast, medium, slow)
     else:
-        tdf = DataFrame({
+        tdf = cudf.DataFrame({
             "high": high,
             "low": low,
             f"close_{drift}": close.shift(drift)
@@ -40,9 +39,9 @@ def uo(high, low, close, fast=None, medium=None, slow=None, fast_w=None, medium_
         bp = close - min_l_or_pc
         tr = max_h_or_pc - min_l_or_pc
 
-        fast_avg = bp.rolling(fast).sum() / tr.rolling(fast).sum()
-        medium_avg = bp.rolling(medium).sum() / tr.rolling(medium).sum()
-        slow_avg = bp.rolling(slow).sum() / tr.rolling(slow).sum()
+        fast_avg = bp.rolling(window=fast).sum() / tr.rolling(window=fast).sum()
+        medium_avg = bp.rolling(window=medium).sum() / tr.rolling(window=medium).sum()
+        slow_avg = bp.rolling(window=slow).sum() / tr.rolling(window=slow).sum()
 
         total_weight = fast_w + medium_w + slow_w
         weights = (fast_w * fast_avg) + (medium_w * medium_avg) + (slow_w * slow_avg)
@@ -113,4 +112,3 @@ Kwargs:
 
 Returns:
     pd.Series: New feature generated.
-"""

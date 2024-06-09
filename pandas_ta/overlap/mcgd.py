@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
+import cudf
 from pandas_ta.utils import get_offset, verify_series
-
 
 def mcgd(close, length=None, offset=None, c=None, **kwargs):
     """Indicator: McGinley Dynamic Indicator"""
@@ -20,8 +20,8 @@ def mcgd(close, length=None, offset=None, c=None, **kwargs):
         series.iloc[1] = (series.iloc[0] + ((series.iloc[1] - series.iloc[0]) / denom))
         return series.iloc[1]
 
-    mcg_cell = close[0:].rolling(2, min_periods=2).apply(mcg_, raw=False)
-    mcg_ds = close[:1].append(mcg_cell[1:])
+    mcg_cell = close.to_cuda().rolling(window=2, min_periods=2).apply_cuda(mcg_, inplace=False)
+    mcg_ds = close.to_cuda()[:1].concat(mcg_cell[1:])
 
     # Offset
     if offset != 0:
@@ -68,15 +68,15 @@ Calculation:
     mcg_ds = close[:1].append(mcg_cell[1:])
 
 Args:
-    close (pd.Series): Series of 'close's
+    close (cuDF.Series): Series of 'close's
     length (int): Indicator's period. Default: 10
     offset (int): Number of periods to offset the result. Default: 0
     c (float): Multiplier for the denominator, sometimes set to 0.6. Default: 1
 
 Kwargs:
-    fillna (value, optional): pd.DataFrame.fillna(value)
+    fillna (value, optional): cuDF.Series.fillna(value)
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cuDF.Series: New feature generated.
 """

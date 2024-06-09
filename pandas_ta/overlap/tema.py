@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
+import cudf
 from .ema import ema
 from pandas_ta import Imports
 from pandas_ta.utils import get_offset, verify_series
-
 
 def tema(close, length=None, talib=None, offset=None, **kwargs):
     """Indicator: Triple Exponential Moving Average (TEMA)"""
@@ -17,7 +17,8 @@ def tema(close, length=None, talib=None, offset=None, **kwargs):
     # Calculate Result
     if Imports["talib"] and mode_tal:
         from talib import TEMA
-        tema = TEMA(close, length)
+        tema = TEMA(close.to_pandas(), length)
+        tema = cudf.Series(tema, index=close.index)
     else:
         ema1 = ema(close=close, length=length, **kwargs)
         ema2 = ema(close=ema1, length=length, **kwargs)
@@ -36,7 +37,7 @@ def tema(close, length=None, talib=None, offset=None, **kwargs):
 
     # Name & Category
     tema.name = f"TEMA_{length}"
-    tema.category = "overlap"
+    tema.categorical_inds = "overlap"
 
     return tema
 
@@ -59,7 +60,7 @@ Calculation:
     TEMA = 3 * (ema1 - ema2) + ema3
 
 Args:
-    close (pd.Series): Series of 'close's
+    close (cudf.Series): Series of 'close's
     length (int): It's period. Default: 10
     talib (bool): If TA Lib is installed and talib is True, Returns the TA Lib
         version. Default: True
@@ -72,5 +73,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cudf.Series: New feature generated.
 """

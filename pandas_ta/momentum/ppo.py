@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
-from pandas import DataFrame
-from pandas_ta import Imports
-from pandas_ta.overlap import ma
-from pandas_ta.utils import get_offset, tal_ma, verify_series
-
+import cudf
+from cucim.ta import overlap
+from cucim.ta.utils import get_offset, tal_ma, verify_series
+import cupy
 
 def ppo(close, fast=None, slow=None, signal=None, scalar=None, mamode=None, talib=None, offset=None, **kwargs):
     """Indicator: Percentage Price Oscillator (PPO)"""
@@ -22,14 +20,14 @@ def ppo(close, fast=None, slow=None, signal=None, scalar=None, mamode=None, tali
     if close is None: return
 
     # Calculate Result
-    if Imports["talib"] and mode_tal:
-        from talib import PPO
-        ppo = PPO(close, fast, slow, tal_ma(mamode))
-    else:
+    if mode_tal:
+        from cucim.ta.overlap import ma
         fastma = ma(mamode, close, length=fast)
         slowma = ma(mamode, close, length=slow)
         ppo = scalar * (fastma - slowma)
         ppo /= slowma
+    else:
+        raise ImportError("TA Lib is not supported in CuDF")
 
     signalma = ma("ema", ppo, length=signal)
     histogram = ppo - signalma
@@ -59,12 +57,11 @@ def ppo(close, fast=None, slow=None, signal=None, scalar=None, mamode=None, tali
 
     # Prepare DataFrame to return
     data = {ppo.name: ppo, histogram.name: histogram, signalma.name: signalma}
-    df = DataFrame(data)
+    df = cudf.DataFrame(data)
     df.name = f"PPO{_props}"
     df.category = ppo.category
 
     return df
-
 
 ppo.__doc__ = \
 """Percentage Price Oscillator (PPO)
@@ -86,7 +83,7 @@ Calculation:
     Histogram = PPO - Signal
 
 Args:
-    close(pandas.Series): Series of 'close's
+    close(pandas.Series or cupy.ndarray): Series of 'close's
     fast(int): The short period. Default: 12
     slow(int): The long period. Default: 26
     signal(int): The signal period. Default: 9
@@ -101,5 +98,4 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.DataFrame: ppo, histogram, signal columns
-"""
+    pd.DataFrame: ppo, histogram, signal columns"""

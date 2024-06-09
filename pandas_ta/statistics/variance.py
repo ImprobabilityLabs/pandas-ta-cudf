@@ -1,7 +1,24 @@
 # -*- coding: utf-8 -*-
-from pandas_ta import Imports
-from pandas_ta.utils import get_offset, verify_series
+import cudf
+from cusignal_FILTER import filter_design
+from numba import cuda
 
+# Ensure CuPy is installed
+try:
+    import cupy as cp
+except ImportError:
+    raise ImportError("CuPy is not installed. Please install it.")
+
+# Create a CUDA device
+device = cuda.device.get_device(0)
+
+@cuda.jit
+def variance_kernel(close, length, ddof, min_periods, out):
+    idx = cuda.grid(1)
+    if idx >= close.size:
+        return
+    window = cuda.window.nterior(close, idx, length)
+    out[idx] = cuda.std(window) ** 2
 
 def variance(close, length=None, ddof=None, talib=None, offset=None, **kwargs):
     """Indicator: Variance"""
@@ -9,7 +26,7 @@ def variance(close, length=None, ddof=None, talib=None, offset=None, **kwargs):
     length = int(length) if length and length > 1 else 30
     ddof = int(ddof) if isinstance(ddof, int) and ddof >= 0 and ddof < length else 1
     min_periods = int(kwargs["min_periods"]) if "min_periods" in kwargs and kwargs["min_periods"] is not None else length
-    close = verify_series(close, max(length, min_periods))
+    close = cudf.Series(close).astype(float)
     offset = get_offset(offset)
     mode_tal = bool(talib) if isinstance(talib, bool) else True
 
@@ -20,7 +37,12 @@ def variance(close, length=None, ddof=None, talib=None, offset=None, **kwargs):
         from talib import VAR
         variance = VAR(close, length)
     else:
-        variance = close.rolling(length, min_periods=min_periods).var(ddof)
+        variance = cudf.Series(index=close.index)
+        threadsperblock = 128
+        blocks = (close.size + threadsperblock - 1) // threadsperblock
+        out = cuda.to_device(close)
+        variance_kernel[blocks, threadsperblock](close.values, length, ddof, min_periods, out)
+        variance = cudf.Series(out.copy_to_host())
 
     # Offset
     if offset != 0:
@@ -37,7 +59,6 @@ def variance(close, length=None, ddof=None, talib=None, offset=None, **kwargs):
     variance.category = "statistics"
 
     return variance
-
 
 variance.__doc__ = \
 """Rolling Variance

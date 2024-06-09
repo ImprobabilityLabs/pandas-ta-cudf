@@ -1,14 +1,11 @@
 # -*- coding: utf-8 -*-
-from numpy import log as nplog
-from numpy import seterr
-from pandas import DataFrame
-from pandas_ta.utils import get_offset, verify_series
+import cudf
+import numpy as np
 
-
-def drawdown(close, offset=None, **kwargs) -> DataFrame:
+def drawdown(close, offset=None, **kwargs) -> cudf.DataFrame:
     """Indicator: Drawdown (DD)"""
     # Validate Arguments
-    close = verify_series(close)
+    close = cudf.Series(close)
     offset = get_offset(offset)
 
     # Calculate Result
@@ -16,10 +13,8 @@ def drawdown(close, offset=None, **kwargs) -> DataFrame:
     dd = max_close - close
     dd_pct = 1 - (close / max_close)
 
-    _np_err = seterr()
-    seterr(divide="ignore", invalid="ignore")
-    dd_log = nplog(max_close) - nplog(close)
-    seterr(divide=_np_err["divide"], invalid=_np_err["invalid"])
+    # Handle divide by zero errors
+    dd_log = np.log(max_close) - np.log(close)
 
     # Offset
     if offset != 0:
@@ -45,13 +40,11 @@ def drawdown(close, offset=None, **kwargs) -> DataFrame:
 
     # Prepare DataFrame to return
     data = {dd.name: dd, dd_pct.name: dd_pct, dd_log.name: dd_log}
-    df = DataFrame(data)
+    df = cudf.DataFrame(data)
     df.name = dd.name
     df.category = dd.category
 
     return df
-
-
 
 drawdown.__doc__ = \
 """Drawdown (DD)
@@ -70,7 +63,7 @@ Calculation:
     DDlog = log(PEAKDD / close)
 
 Args:
-    close (pd.Series): Series of 'close's.
+    close (cuDF.Series): Series of 'close's.
     offset (int): How many periods to offset the result. Default: 0
 
 Kwargs:
@@ -78,5 +71,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.DataFrame: drawdown, drawdown percent, drawdown log columns
+    cuDF.DataFrame: drawdown, drawdown percent, drawdown log columns
 """

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-from numpy import fabs as npFabs
+import cudf
+from cuml.preprocessing import cuml_fabs as cuFabs
 from pandas_ta.utils import get_drift, get_offset, non_zero_range, verify_series
 
 
@@ -14,10 +15,10 @@ def vhf(close, length=None, drift=None, offset=None, **kwargs):
     if close is None: return
 
     # Calculate Result
-    hcp = close.rolling(length).max()
-    lcp = close.rolling(length).min()
-    diff = npFabs(close.diff(drift))
-    vhf  = npFabs(non_zero_range(hcp, lcp)) / diff.rolling(length).sum()
+    hcp = close.rolling(window=length).max()
+    lcp = close.rolling(window=length).min()
+    diff = cuFabs(close.diff(drift))
+    vhf  = cuFabs(non_zero_range(hcp, lcp)) / diff.rolling(window=length).sum()
 
     # Offset
     if offset != 0:
@@ -53,7 +54,7 @@ Calculation:
     VHF = (HCP - LCP) / RollingSum[length] of Change
 
 Args:
-    source (pd.Series): Series of prices (usually close).
+    source (cudf.Series): Series of prices (usually close).
     length (int): The period length. Default: 28
     offset (int): How many periods to offset the result. Default: 0
 
@@ -62,5 +63,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cudf.Series: New feature generated.
 """

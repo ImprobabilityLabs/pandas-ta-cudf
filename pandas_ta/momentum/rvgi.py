@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-from pandas import DataFrame
+import cudf
 from pandas_ta.overlap import swma
 from pandas_ta.utils import get_offset, non_zero_range, verify_series
 
@@ -46,7 +45,7 @@ def rvgi(open_, high, low, close, length=None, swma_length=None, offset=None, **
     rvgi.category = signal.category = "momentum"
 
     # Prepare DataFrame to return
-    df = DataFrame({rvgi.name: rvgi, signal.name: signal})
+    df = cudf.DataFrame({rvgi.name: rvgi, signal.name: signal})
     df.name = f"RVGI_{length}_{swma_length}"
     df.category = rvgi.category
 
@@ -87,4 +86,3 @@ Kwargs:
 
 Returns:
     pd.Series: New feature generated.
-"""

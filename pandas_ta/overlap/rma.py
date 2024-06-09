@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
-from pandas_ta.utils import get_offset, verify_series
-
+import cudf
+from cudf.utils import cudautils
+from numba.cuda import cuda
 
 def rma(close, length=None, offset=None, **kwargs):
     """Indicator: wildeR's Moving Average (RMA)"""
     # Validate Arguments
     length = int(length) if length and length > 0 else 10
     alpha = (1.0 / length) if length > 0 else 0.5
-    close = verify_series(close, length)
+    close = cudf.Series(close).astype('float64')
     offset = get_offset(offset)
 
     if close is None: return
@@ -50,7 +51,7 @@ Calculation:
     RMA = EMA(close, alpha=alpha)
 
 Args:
-    close (pd.Series): Series of 'close's
+    close (cudf.Series): Series of 'close's
     length (int): It's period. Default: 10
     offset (int): How many periods to offset the result. Default: 0
 
@@ -59,5 +60,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cudf.Series: New feature generated.
 """

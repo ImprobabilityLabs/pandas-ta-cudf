@@ -1,4 +1,5 @@
-# -*- coding: utf-8 -*-
+ #- -*- coding: utf-8 -*-
+import cudf
 from pandas_ta import Imports
 from pandas_ta.utils import get_offset, verify_series
 
@@ -15,11 +16,18 @@ def sma(close, length=None, talib=None, offset=None, **kwargs):
     if close is None: return
 
     # Calculate Result
-    if Imports["talib"] and mode_tal:
-        from talib import SMA
-        sma = SMA(close, length)
+    if Imports["cudf"]:
+        close = cudf.Series(close)
+        if mode_tal:
+            sma = close.rolling(window=length, min_periods=min_periods).mean()
+        else:
+            sma = close.rolling(window=length, min_periods=min_periods).mean()
     else:
-        sma = close.rolling(length, min_periods=min_periods).mean()
+        if Imports["talib"] and mode_tal:
+            from talib import SMA
+            sma = SMA(close, length)
+        else:
+            sma = close.rolling(window=length, min_periods=min_periods).mean()
 
     # Offset
     if offset != 0:
@@ -53,7 +61,7 @@ Calculation:
     SMA = SUM(close, length) / length
 
 Args:
-    close (pd.Series): Series of 'close's
+    close (pd.Series or cudf.Series): Series of 'close's
     length (int): It's period. Default: 10
     talib (bool): If TA Lib is installed and talib is True, Returns the TA Lib
         version. Default: True
@@ -66,5 +74,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    pd.Series or cudf.Series: New feature generated.
 """

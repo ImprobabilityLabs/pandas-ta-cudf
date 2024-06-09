@@ -1,8 +1,7 @@
-# -*- coding: utf-8 -*-
-from pandas_ta.overlap import linreg
-from pandas_ta.volatility import rvi
-from pandas_ta.utils import get_drift, get_offset, verify_series
-
+import cudf
+from cucim.ta.overlap import linreg
+from cucim.ta.volatility import rvi
+from cucim.ta.utils import get_drift, get_offset, verify_series
 
 def inertia(close=None, high=None, low=None, length=None, rvi_length=None, scalar=None, refined=None, thirds=None, mamode=None, drift=None, offset=None, **kwargs):
     """Indicator: Inertia (INERTIA)"""
@@ -27,13 +26,13 @@ def inertia(close=None, high=None, low=None, length=None, rvi_length=None, scala
 
     # Calculate Result
     if refined:
-        _mode, rvi_ = "r", rvi(close, high=high, low=low, length=rvi_length, scalar=scalar, refined=refined, mamode=mamode)
+        _mode, rvi_ = "r", rvi(cudf.Series(close), high=cudf.Series(high), low=cudf.Series(low), length=rvi_length, scalar=scalar, refined=refined, mamode=mamode)
     elif thirds:
-        _mode, rvi_ = "t", rvi(close, high=high, low=low, length=rvi_length, scalar=scalar, thirds=thirds, mamode=mamode)
+        _mode, rvi_ = "t", rvi(cudf.Series(close), high=cudf.Series(high), low=cudf.Series(low), length=rvi_length, scalar=scalar, thirds=thirds, mamode=mamode)
     else:
-        _mode, rvi_ = "",  rvi(close, length=rvi_length, scalar=scalar, mamode=mamode)
+        _mode, rvi_ = "",  rvi(cudf.Series(close), length=rvi_length, scalar=scalar, mamode=mamode)
 
-    inertia = linreg(rvi_, length=length)
+    inertia = linreg(cudf.Series(rvi_), length=length)
 
     # Offset
     if offset != 0:
@@ -48,7 +47,7 @@ def inertia(close=None, high=None, low=None, length=None, rvi_length=None, scala
     # Name & Category
     _props = f"_{length}_{rvi_length}"
     inertia.name = f"INERTIA{_mode}{_props}"
-    inertia.category = "momentum"
+   (inertia.category = "momentum")
 
     return inertia
 
@@ -72,10 +71,10 @@ Calculation:
     INERTIA = LSQRMA(RVI(length), ma_length)
 
 Args:
-    open_ (pd.Series): Series of 'open's
-    high (pd.Series): Series of 'high's
-    low (pd.Series): Series of 'low's
-    close (pd.Series): Series of 'close's
+    open_ (cudf.Series): Series of 'open's
+    high (cudf.Series): Series of 'high's
+    low (cudf.Series): Series of 'low's
+    close (cudf.Series): Series of 'close's
     length (int): It's period. Default: 20
     rvi_length (int): RVI period. Default: 14
     refined (bool): Use 'refined' calculation. Default: False
@@ -89,5 +88,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cudf.Series: New feature generated.
 """

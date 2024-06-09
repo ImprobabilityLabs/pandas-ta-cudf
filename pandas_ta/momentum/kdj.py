@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-from pandas import DataFrame
-from pandas_ta.overlap import rma
-from pandas_ta.utils import get_offset, non_zero_range, verify_series
+import cudf
+from cudf.ta.overlap import rma
+from cudf.ta.utils import get_offset, non_zero_range, verify_series
 
 
 def kdj(high=None, low=None, close=None, length=None, signal=None, offset=None, **kwargs):
@@ -51,7 +51,7 @@ def kdj(high=None, low=None, close=None, length=None, signal=None, offset=None, 
     k.category = d.category = j.category = "momentum"
 
     # Prepare DataFrame to return
-    kdjdf = DataFrame({k.name: k, d.name: d, j.name: j})
+    kdjdf = cudf.DataFrame({k.name: k, d.name: d, j.name: j})
     kdjdf.name = f"KDJ{_params}"
     kdjdf.category = "momentum"
 
@@ -84,9 +84,9 @@ Calculation:
     J = 3K - 2D
 
 Args:
-    high (pd.Series): Series of 'high's
-    low (pd.Series): Series of 'low's
-    close (pd.Series): Series of 'close's
+    high (cudf.Series): Series of 'high's
+    low (cudf.Series): Series of 'low's
+    close (cudf.Series): Series of 'close's
     length (int): Default: 9
     signal (int): Default: 3
     offset (int): How many periods to offset the result. Default: 0
@@ -96,5 +96,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cudf.DataFrame: New feature generated.
 """

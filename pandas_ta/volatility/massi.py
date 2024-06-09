@@ -1,4 +1,6 @@
+```python
 # -*- coding: utf-8 -*-
+import cudf
 from pandas_ta.overlap import ema
 from pandas_ta.utils import get_offset, non_zero_range, verify_series
 
@@ -20,8 +22,9 @@ def massi(high, low, fast=None, slow=None, offset=None, **kwargs):
 
     # Calculate Result
     high_low_range = non_zero_range(high, low)
+    high_low_range = cudf.Series(high_low_range)
     hl_ema1 = ema(close=high_low_range, length=fast, **kwargs)
-    hl_ema2 = ema(close=hl_ema1, length=fast, **kwargs)
+    hl_ema2 = ema(close=cudf.Series(hl_ema1), length=fast, **kwargs)
 
     hl_ratio = hl_ema1 / hl_ema2
     massi = hl_ratio.rolling(slow, min_periods=slow).sum()

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-from pandas_ta import Imports
+import cudf
 from pandas_ta.utils import get_offset, verify_series
-
+import cuspatial
 
 def midprice(high, low, length=None, talib=None, offset=None, **kwargs):
     """Indicator: Midprice"""
@@ -21,8 +21,8 @@ def midprice(high, low, length=None, talib=None, offset=None, **kwargs):
         from talib import MIDPRICE
         midprice = MIDPRICE(high, low, length)
     else:
-        lowest_low = low.rolling(length, min_periods=min_periods).min()
-        highest_high = high.rolling(length, min_periods=min_periods).max()
+        lowest_low = low.rolling(window=length, min_periods=min_periods).min()
+        highest_high = high.rolling(window=length, min_periods=min_periods).max()
         midprice = 0.5 * (lowest_low + highest_high)
 
     # Offset

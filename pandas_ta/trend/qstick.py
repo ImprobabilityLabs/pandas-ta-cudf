@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
+import cudf
 from pandas_ta.overlap import dema, ema, hma, rma, sma
 from pandas_ta.utils import get_offset, non_zero_range, verify_series
-
 
 def qstick(open_, close, length=None, offset=None, **kwargs):
     """Indicator: Q Stick"""
@@ -18,15 +18,15 @@ def qstick(open_, close, length=None, offset=None, **kwargs):
     diff = non_zero_range(close, open_)
 
     if ma == "dema":
-        qstick = dema(diff, length=length, **kwargs)
+        qstick = dema(cudf.Series(diff), length=length, **kwargs)
     elif ma == "ema":
-        qstick = ema(diff, length=length, **kwargs)
+        qstick = ema(cudf.Series(diff), length=length, **kwargs)
     elif ma == "hma":
-        qstick = hma(diff, length=length)
+        qstick = hma(cudf.Series(diff), length=length)
     elif ma == "rma":
-        qstick = rma(diff, length=length)
+        qstick = rma(cudf.Series(diff), length=length)
     else: # "sma"
-        qstick = sma(diff, length=length)
+        qstick = sma(cudf.Series(diff), length=length)
 
     # Offset
     if offset != 0:
@@ -61,8 +61,8 @@ Calculation:
     qstick = xMA(close - open, length)
 
 Args:
-    open (pd.Series): Series of 'open's
-    close (pd.Series): Series of 'close's
+    open (cudf.Series): Series of 'open's
+    close (cudf.Series): Series of 'close's
     length (int): It's period. Default: 1
     ma (str): The type of moving average to use. Default: None, which is 'sma'
     offset (int): How many periods to offset the result. Default: 0
@@ -72,5 +72,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cudf.Series: New feature generated.
 """

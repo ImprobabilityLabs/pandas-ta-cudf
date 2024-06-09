@@ -1,14 +1,14 @@
 from .config import sample_data
-from .context import pandas_ta
+from .context import cudf_ta
 
 from unittest import TestCase
-from pandas import DataFrame
+from cudf import DataFrame
 
 
 class TestVolumeExtension(TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.data = sample_data
+        cls.data = cudf_ta.from_pandas(sample_data)
         cls.open = cls.data["open"]
 
     @classmethod
@@ -32,7 +32,7 @@ class TestVolumeExtension(TestCase):
 
     def test_adosc_ext(self):
         self.data.ta.adosc(append=True)
-        self.assertIsInstance(self.data, DataFrame)
+        self(isinstance(self.data, DataFrame)
         self.assertEqual(self.data.columns[-1], "ADOSC_3_10")
 
     def test_aobv_ext(self):

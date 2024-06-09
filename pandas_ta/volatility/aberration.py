@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
-# from numpy import sqrt as npsqrt
-from pandas import DataFrame
+import cudf
+from cucim import sqrt as cusqrt
 from .atr import atr
 from pandas_ta.overlap import hlc3, sma
 from pandas_ta.utils import get_offset, verify_series
-
 
 def aberration(high, low, close, length=None, atr_length=None, offset=None, **kwargs):
     """Indicator: Aberration (ABER)"""
@@ -52,12 +51,11 @@ def aberration(high, low, close, length=None, atr_length=None, offset=None, **kw
     sg.name = f"ABER_SG{_props}"
     xg.name = f"ABER_XG{_props}"
     atr_.name = f"ABER_ATR{_props}"
-    zg.category = sg.category = "volatility"
-    xg.category = atr_.category = zg.category
+    zg.category = sg.category = xg.category = atr_.category = "volatility"
 
     # Prepare DataFrame to return
     data = {zg.name: zg, sg.name: sg, xg.name: xg, atr_.name: atr_}
-    aberdf = DataFrame(data)
+    aberdf = cudf.DataFrame(data)
     aberdf.name = f"ABER{_props}"
     aberdf.category = zg.category
 
@@ -86,17 +84,17 @@ Calculation:
     XG = ZG - ATR
 
 Args:
-    high (pd.Series): Series of 'high's
-    low (pd.Series): Series of 'low's
-    close (pd.Series): Series of 'close's
+    high (cuDF.Series): Series of 'high's
+    low (cuDF.Series): Series of 'low's
+    close (cuDF.Series): Series of 'close's
     length (int): The short period. Default: 5
     atr_length (int): The short period. Default: 15
     offset (int): How many periods to offset the result. Default: 0
 
 Kwargs:
-    fillna (value, optional): pd.DataFrame.fillna(value)
+    fillna (value, optional): cuDF.DataFrame.fillna(value)
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.DataFrame: zg, sg, xg, atr columns.
+    cuDF.DataFrame: zg, sg, xg, atr columns.
 """

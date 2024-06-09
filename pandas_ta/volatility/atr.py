@@ -1,9 +1,9 @@
-# -*- coding: utf-8 -*-
-from .true_range import true_range
-from pandas_ta import Imports
-from pandas_ta.overlap import ma
-from pandas_ta.utils import get_drift, get_offset, verify_series
-
+import cudf
+from cuml.utils import get_cuml_logger
+from ..true_range import true_range
+from ..imports import Imports
+from ..overlap import ma
+from ..utils import get_drift, get_offset, verify_series
 
 def atr(high, low, close, length=None, mamode=None, talib=None, drift=None, offset=None, **kwargs):
     """Indicator: Average True Range (ATR)"""
@@ -80,11 +80,11 @@ Calculation:
         ATR *= 100 / close
 
 Args:
-    high (pd.Series): Series of 'high's
-    low (pd.Series): Series of 'low's
-    close (pd.Series): Series of 'close's
+    high (cudf.Series): Series of 'high's
+    low (cudf.Series): Series of 'low's
+    close (cudf.Series): Series of 'close's
     length (int): It's period. Default: 14
-    mamode (str): See ```help(ta.ma)```. Default: 'rma'
+    mamode (str): See ```help(cuml.ma)```. Default: 'rma'
     talib (bool): If TA Lib is installed and talib is True, Returns the TA Lib
         version. Default: True
     drift (int): The difference period. Default: 1
@@ -96,5 +96,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cudf.Series: New feature generated.
 """

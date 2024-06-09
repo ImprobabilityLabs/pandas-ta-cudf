@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
+import cudf
 from pandas_ta.overlap import ma
-from pandas_ta.utils import get_drift, get_offset, verify_series
-
+from pandas_ta.utils import get_drift, get_offset, verify_series_cudf
 
 def efi(close, volume, length=None, mamode=None, drift=None, offset=None, **kwargs):
     """Indicator: Elder's Force Index (EFI)"""
     # Validate arguments
     length = int(length) if length and length > 0 else 13
     mamode = mamode if isinstance(mamode, str) else "ema"
-    close = verify_series(close, length)
-    volume = verify_series(volume, length)
+    close = verify_series_cudf(close, length)
+    volume = verify_series_cudf(volume, length)
     drift = get_drift(drift)
     offset = get_offset(offset)
 
@@ -36,6 +36,9 @@ def efi(close, volume, length=None, mamode=None, drift=None, offset=None, **kwar
     return efi
 
 
+def verify_series_cudf(data, length):
+    return cudf.Series(verify_series(data, length))
+
 efi.__doc__ = \
 """Elder's Force Index (EFI)
 
@@ -59,8 +62,8 @@ Calculation:
         EFI = EMA(pv_diff, length)
 
 Args:
-    close (pd.Series): Series of 'close's
-    volume (pd.Series): Series of 'volume's
+    close (cudf.Series): Series of 'close's
+    volume (cudf.Series): Series of 'volume's
     length (int): The short period. Default: 13
     drift (int): The diff period. Default: 1
     mamode (str): See ```help(ta.ma)```. Default: 'ema'
@@ -71,5 +74,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cudf.Series: New feature generated.
 """

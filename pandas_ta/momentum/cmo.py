@@ -1,8 +1,7 @@
-# -*- coding: utf-8 -*-
 from pandas_ta import Imports
 from pandas_ta.overlap import rma
 from pandas_ta.utils import get_drift, get_offset, verify_series
-
+import cudf
 
 def cmo(close, length=None, scalar=None, talib=None, drift=None, offset=None, **kwargs):
     """Indicator: Chande Momentum Oscillator (CMO)"""
@@ -15,6 +14,9 @@ def cmo(close, length=None, scalar=None, talib=None, drift=None, offset=None, **
     mode_tal = bool(talib) if isinstance(talib, bool) else True
 
     if close is None: return
+
+    if not isinstance(close, cudf.Series):
+        close = cudf.Series(close)
 
     # Calculate Result
     if Imports["talib"] and mode_tal:
@@ -29,8 +31,8 @@ def cmo(close, length=None, scalar=None, talib=None, drift=None, offset=None, **
             pos_ = rma(positive, length)
             neg_ = rma(negative, length)
         else:
-            pos_ = positive.rolling(length).sum()
-            neg_ = negative.rolling(length).sum()
+            pos_ = positive.rolling(window=length).sum()
+            neg_ = negative.rolling(window=length).sum()
 
         cmo = scalar * (pos_ - neg_) / (pos_ + neg_)
 
@@ -84,4 +86,3 @@ Kwargs:
 
 Returns:
     pd.Series: New feature generated.
-"""

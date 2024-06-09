@@ -1,14 +1,14 @@
 from .config import sample_data
-from .context import pandas_ta
+from .context import cu_pandas_ta
 
 from unittest import skip, TestCase
-from pandas import DataFrame
+from cudf import DataFrame
 
 
 class TestTrendExtension(TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.data = sample_data
+        cls.data = sample_data.to_cudf()
 
     @classmethod
     def tearDownClass(cls):
@@ -49,7 +49,7 @@ class TestTrendExtension(TestCase):
 
     def test_cksp_tv_ext(self):
         self.data.ta.cksp(tvmode=True, append=True)
-        self.assertIsInstance(self.data, DataFrame)
+        self isinstance(self.data, DataFrame)
         self.assertEqual(list(self.data.columns[-2:]), ["CKSPl_10_1_9", "CKSPs_10_1_9"])
 
     def test_decay_ext(self):

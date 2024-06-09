@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
+import cudf
 from pandas_ta.overlap import sma
 from pandas_ta.utils import get_offset, verify_series
 
-# - Standard definition of your custom indicator function (including docs)-
+# - Standard definition of your custom indicator function (including docs) -
 
 def ni(close, length=None, centered=False, offset=None, **kwargs):
     """
@@ -17,11 +18,11 @@ def ni(close, length=None, centered=False, offset=None, **kwargs):
 
     # Calculate Result
     t = int(0.5 * length) + 1
-    ma = sma(close, length)
+    ma = sma(cudf.Series(close), length)
 
-    ni = close - ma.shift(t)
+    ni = cudf.Series(close) - ma.shift(t)
     if centered:
-        ni = (close.shift(t) - ma).shift(-t)
+        ni = (cudf.Series(close).shift(t) - ma).shift(-t)
 
     # Offset
     if offset != 0:
@@ -58,7 +59,7 @@ Calculation:
         ni = ni.shift(-t)
 
 Args:
-    close (pd.Series): Series of 'close's
+    close (cudf.Series or pd.Series): Series of 'close's
     length (int): It's period. Default: 20
     centered (bool): Shift the ni back by int(0.5 * length) + 1. Default: False
     offset (int): How many periods to offset the result. Default: 0
@@ -68,12 +69,12 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cudf.Series: New feature generated.
 """
 
 # - Define a matching class method --------------------------------------------
 
-def ni_method(self, length=None, offset=None, **kwargs):
-    close = self._get_column(kwargs.pop("close", "close"))
+def ni_method(self, close, length=None, offset=None, **kwargs):
+    close = self._get_column(kwargs.pop("close", close))
     result = ni(close=close, length=length, offset=offset, **kwargs)
     return self._post_process(result, **kwargs)

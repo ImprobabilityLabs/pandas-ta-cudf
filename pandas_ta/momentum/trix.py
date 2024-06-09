@@ -1,8 +1,7 @@
-# -*- coding: utf-8 -*-
-from pandas import DataFrame
-from pandas_ta.overlap.ema import ema
-from pandas_ta.utils import get_drift, get_offset, verify_series
-
+import cupy as cp
+import cudf
+from cuml ta.overlap import ema
+from cuml ta.utils import get_drift, get_offset, verify_series
 
 def trix(close, length=None, signal=None, scalar=None, drift=None, offset=None, **kwargs):
     """Indicator: Trix (TRIX)"""
@@ -43,7 +42,7 @@ def trix(close, length=None, signal=None, scalar=None, drift=None, offset=None, 
     trix.category = trix_signal.category = "momentum"
 
     # Prepare DataFrame to return
-    df = DataFrame({trix.name: trix, trix_signal.name: trix_signal})
+    df = cudf.DataFrame({trix.name: trix, trix_signal.name: trix_signal})
     df.name = f"TRIX_{length}_{signal}"
     df.category = "momentum"
 
@@ -69,7 +68,7 @@ Calculation:
     TRIX = 100 * ROC(ema3, drift)
 
 Args:
-    close (pd.Series): Series of 'close's
+    close (cupy array): Array of 'close's
     length (int): It's period. Default: 18
     signal (int): It's period. Default: 9
     scalar (float): How much to magnify. Default: 100
@@ -77,9 +76,9 @@ Args:
     offset (int): How many periods to offset the result. Default: 0
 
 Kwargs:
-    fillna (value, optional): pd.DataFrame.fillna(value)
+    fillna (value, optional): cupy array fillna(value)
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cupy array: New feature generated.
 """

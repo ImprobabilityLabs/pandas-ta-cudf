@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from pandas import DataFrame
+import cudf
 from pandas_ta.utils import get_offset, verify_series
 
 
@@ -13,8 +13,8 @@ def ha(open_, high, low, close, offset=None, **kwargs):
     offset = get_offset(offset)
 
     # Calculate Result
-    m = close.size
-    df = DataFrame({
+    m = close.shape[0]
+    df = cudf.DataFrame({
         "HA_open": 0.5 * (open_.iloc[0] + close.iloc[0]),
         "HA_high": high,
         "HA_low": low,
@@ -80,15 +80,15 @@ Calculation:
     it is now possible to continue computing the HA candles per the formulas.
 ​​
 Args:
-    open_ (pd.Series): Series of 'open's
-    high (pd.Series): Series of 'high's
-    low (pd.Series): Series of 'low's
-    close (pd.Series): Series of 'close's
+    open_ (cudf.Series): Series of 'open's
+    high (cudf.Series): Series of 'high's
+    low (cudf.Series): Series of 'low's
+    close (cudf.Series): Series of 'close's
 
 Kwargs:
-    fillna (value, optional): pd.DataFrame.fillna(value)
+    fillna (value, optional): cudf.DataFrame.fillna(value)
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.DataFrame: ha_open, ha_high,ha_low, ha_close columns.
+    cudf.DataFrame: ha_open, ha_high,ha_low, ha_close columns.
 """

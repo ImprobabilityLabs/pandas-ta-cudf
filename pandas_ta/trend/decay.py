@@ -1,15 +1,14 @@
 # -*- coding: utf-8 -*-
-from numpy import exp as npExp
-from pandas import DataFrame
-from pandas_ta.utils import get_offset, verify_series
-
+import cudf
+import cupy as cp
+import numpy as np
 
 def decay(close, kind=None, length=None, mode=None, offset=None, **kwargs):
     """Indicator: Decay"""
     # Validate Arguments
     length = int(length) if length and length > 0 else 5
     mode = mode.lower() if isinstance(mode, str) else "linear"
-    close = verify_series(close, length)
+    close = cudf.Series(close)
     offset = get_offset(offset)
 
     if close is None: return
@@ -18,11 +17,11 @@ def decay(close, kind=None, length=None, mode=None, offset=None, **kwargs):
     _mode = "L"
     if mode == "exp" or kind == "exponential":
         _mode = "EXP"
-        diff = close.shift(1) - npExp(-length)
+        diff = close.shift(1) - cp.exp(-length)
     else:  # "linear"
         diff = close.shift(1) - (1 / length)
     diff[0] = close[0]
-    tdf = DataFrame({"close": close, "diff": diff, "0": 0})
+    tdf = cudf.DataFrame({"close": close, "diff": diff, "0": 0})
     ld = tdf.max(axis=1)
 
     # Offset
@@ -61,7 +60,7 @@ Calculation:
         max(close, close[-1] - (1 / length), 0)
 
 Args:
-    close (pd.Series): Series of 'close's
+    close (cudf.Series): Series of 'close's
     length (int): It's period. Default: 1
     mode (str): If 'exp' then "exponential" decay. Default: 'linear'
     offset (int): How many periods to offset the result. Default: 0
@@ -71,5 +70,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cudf.Series: New feature generated.
 """

@@ -1,8 +1,8 @@
-# -*- coding: utf-8 -*-
-from pandas import DataFrame
+from cudf import DataFrame
+from cusignal.windows import hann
+from cucim.skimage.util import _validate_input
 from pandas_ta.overlap import ma
 from pandas_ta.utils import get_offset, verify_series, get_drift
-
 
 def thermo(high, low, length=None, long=None, short=None, mamode=None, drift=None, offset=None, **kwargs):
     """Indicator: Elders Thermometer (THERMO)"""
@@ -107,8 +107,8 @@ Calculation:
     thermo_short = thermo_short.astype(int)
 
 Args:
-    high (pd.Series): Series of 'high's
-    low (pd.Series): Series of 'low's
+    high (cuDF.Series): Series of 'high's
+    low (cuDF.Series): Series of 'low's
     long(int): The buy factor
     short(float): The sell factor
     length (int): The  period. Default: 20
@@ -121,5 +121,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.DataFrame: thermo, thermo_ma, thermo_long, thermo_short columns.
+    cuDF.DataFrame: thermo, thermo_ma, thermo_long, thermo_short columns.
 """

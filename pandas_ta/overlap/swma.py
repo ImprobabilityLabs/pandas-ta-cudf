@@ -1,4 +1,6 @@
+```
 # -*- coding: utf-8 -*-
+import cudf
 from pandas_ta.utils import get_offset, symmetric_triangle, verify_series, weights
 
 
@@ -15,8 +17,8 @@ def swma(close, length=None, asc=None, offset=None, **kwargs):
 
     # Calculate Result
     triangle = symmetric_triangle(length, weighted=True)
-    swma = close.rolling(length, min_periods=length).apply(weights(triangle), raw=True)
-    # swma = close.rolling(length).apply(weights(triangle), raw=True)
+    gpu_close = cudf.Series(close)
+    swma = gpu_close.rolling(length, min_periods=length).apply(weights(triangle), raw=True)
 
     # Offset
     if offset != 0:
@@ -71,3 +73,4 @@ Kwargs:
 Returns:
     pd.Series: New feature generated.
 """
+```

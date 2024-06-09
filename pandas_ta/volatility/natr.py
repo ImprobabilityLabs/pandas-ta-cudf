@@ -1,8 +1,13 @@
-# -*- coding: utf-8 -*-
-from .atr import atr
-from pandas_ta import Imports
-from pandas_ta.utils import get_drift, get_offset, verify_series
+Here is the refactored code to work with CuDF and CUDA:
 
+```python
+# -*- coding: utf-8 -*-
+import cudf
+from .atr import atr
+from cuml.tsa import ExponentialMovingAverage as EMAModel
+from cuml.metrics import AverageTrueRange as ATRModel
+import cupy
+import numpy as np
 
 def natr(high, low, close, length=None, scalar=None, mamode=None, talib=None, drift=None, offset=None, **kwargs):
     """Indicator: Normalized Average True Range (NATR)"""
@@ -10,9 +15,9 @@ def natr(high, low, close, length=None, scalar=None, mamode=None, talib=None, dr
     length = int(length) if length and length > 0 else 14
     mamode = mamode if isinstance(mamode, str) else "ema"
     scalar = float(scalar) if scalar else 100
-    high = verify_series(high, length)
-    low = verify_series(low, length)
-    close = verify_series(close, length)
+    high = cuda.to_cuda(high) if not isinstance(high, cudf.Series) else high
+    low = cuda.to_cuda(low) if not isinstance(low, cudf.Series) else low
+    close = cuda.to_cuda(close) if not isinstance(close, cudf.Series) else close
     drift = get_drift(drift)
     offset = get_offset(offset)
     mode_tal = bool(talib) if isinstance(talib, bool) else True
@@ -20,12 +25,14 @@ def natr(high, low, close, length=None, scalar=None, mamode=None, talib=None, dr
     if high is None or low is None or close is None: return
 
     # Calculate Result
-    if Imports["talib"] and mode_tal:
-        from talib import NATR
-        natr = NATR(high, low, close, length)
+    if mode_tal:
+        from cuml.metrics import AverageTrueRange as ATR
+        atr_values = ATR().fit(high, low, close, length=length).predict(high, low, close)
+        natr = scalar / close * atr_values
     else:
         natr = scalar / close
-        natr *= atr(high=high, low=low, close=close, length=length, mamode=mamode, drift=drift, offset=offset, **kwargs)
+        atr_values = atr(high=high, low=low, close=close, length=length, mamode=mamode, drift=drift, offset=offset, **kwargs)
+        natr *= atr_values
 
     # Offset
     if offset != 0:
@@ -42,7 +49,6 @@ def natr(high, low, close, length=None, scalar=None, mamode=None, talib=None, dr
     natr.category = "volatility"
 
     return natr
-
 
 natr.__doc__ = \
 """Normalized Average True Range (NATR)
@@ -64,7 +70,7 @@ Args:
     close (pd.Series): Series of 'close's
     length (int): The short period. Default: 20
     scalar (float): How much to magnify. Default: 100
-    mamode (str): See ```help(ta.ma)```. Default: 'ema'
+    mamode (str): See ```help(cuml.tsa.EMA)```. Default: 'ema'
     talib (bool): If TA Lib is installed and talib is True, Returns the TA Lib
         version. Default: True
     offset (int): How many periods to offset the result. Default: 0
@@ -74,5 +80,6 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature
+    cudf.Series: New feature
 """
+```

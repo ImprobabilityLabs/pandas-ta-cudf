@@ -1,7 +1,9 @@
+Here is the refactored code to work with CuDF and CUDA:
+```
 # -*- coding: utf-8 -*-
+import cudf
 from pandas_ta.overlap import linreg
 from pandas_ta.utils import get_drift, get_offset, verify_series
-
 
 def cfo(close, length=None, scalar=None, drift=None, offset=None, **kwargs):
     """Indicator: Chande Forcast Oscillator (CFO)"""
@@ -34,7 +36,6 @@ def cfo(close, length=None, scalar=None, drift=None, offset=None, **kwargs):
 
     return cfo
 
-
 cfo.__doc__ = \
 """Chande Forcast Oscillator (CFO)
 
@@ -52,7 +53,7 @@ Calculation:
     CFO = scalar * (close - LINERREG(length, tdf=True)) / close
 
 Args:
-    close (pd.Series): Series of 'close's
+    close (cudf.Series): Series of 'close's
     length (int): The period. Default: 9
     scalar (float): How much to magnify. Default: 100
     drift (int): The short period. Default: 1
@@ -63,5 +64,6 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cudf.Series: New feature generated.
 """
+```

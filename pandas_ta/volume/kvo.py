@@ -1,7 +1,9 @@
+```
 # -*- coding: utf-8 -*-
-from pandas import DataFrame
-from pandas_ta.overlap import hlc3, ma
-from pandas_ta.utils import get_drift, get_offset, signed_series, verify_series
+import cucim
+import cudf
+from cuml.tsa import ExponentialMovingAverage as EMA
+from cuml.utils import get_drift, get_offset, signed_series, verify_series
 
 
 def kvo(high, low, close, volume, fast=None, slow=None, signal=None, mamode=None, drift=None, offset=None, **kwargs):
@@ -24,8 +26,8 @@ def kvo(high, low, close, volume, fast=None, slow=None, signal=None, mamode=None
     # Calculate Result
     signed_volume = volume * signed_series(hlc3(high, low, close), 1)
     sv = signed_volume.loc[signed_volume.first_valid_index():,]
-    kvo = ma(mamode, sv, length=fast) - ma(mamode, sv, length=slow)
-    kvo_signal = ma(mamode, kvo.loc[kvo.first_valid_index():,], length=signal)
+    kvo = EMA(signed_volume, window=fast) - EMA(signed_volume, window=slow)
+    kvo_signal = EMA(kvo.loc[kvo.first_valid_index():], window=signal)
 
     # Offset
     if offset != 0:
@@ -48,7 +50,7 @@ def kvo(high, low, close, volume, fast=None, slow=None, signal=None, mamode=None
 
     # Prepare DataFrame to return
     data = {kvo.name: kvo, kvo_signal.name: kvo_signal}
-    df = DataFrame(data)
+    df = cudf.DataFrame(data)
     df.name = f"KVO{_props}"
     df.category = kvo.category
 
@@ -75,10 +77,10 @@ Calculation:
     Signal = EMA(KVO, signal)
 
 Args:
-    high (pd.Series): Series of 'high's
-    low (pd.Series): Series of 'low's
-    close (pd.Series): Series of 'close's
-    volume (pd.Series): Series of 'volume's
+    high (cudf.Series): Series of 'high's
+    low (cudf.Series): Series of 'low's
+    close (cudf.Series): Series of 'close's
+    volume (cudf.Series): Series of 'volume's
     fast (int): The fast period. Default: 34
     long (int): The long period. Default: 55
     length_sig (int): The signal period. Default: 13
@@ -90,5 +92,6 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.DataFrame: KVO and Signal columns.
+    cudf.DataFrame: KVO and Signal columns.
 """
+```

@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import cudf
 from pandas_ta.momentum import roc
 from pandas_ta.utils import get_drift, get_offset, verify_series
 
@@ -6,8 +7,8 @@ from pandas_ta.utils import get_drift, get_offset, verify_series
 def pvt(close, volume, drift=None, offset=None, **kwargs):
     """Indicator: Price-Volume Trend (PVT)"""
     # Validate arguments
-    close = verify_series(close)
-    volume = verify_series(volume)
+    close = cudf.Series(verify_series(close))
+    volume = cudf.Series(verify_series(volume))
     drift = get_drift(drift)
     offset = get_offset(offset)
 

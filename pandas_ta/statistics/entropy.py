@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
-from numpy import log as npLog
+import cudf
+import numpy as np
+from cuml.common.docs import generated_by
+from cuml.common.input_utils import get_pattern, InputError
+from cuml.common.import_utils import has_cuML
+from cuml.stats.entropy import entropy as cus_entropy
 from pandas_ta.utils import get_offset, verify_series
-
 
 def entropy(close, length=None, base=None, offset=None, **kwargs):
     """Indicator: Entropy (ENTP)"""
@@ -14,8 +18,9 @@ def entropy(close, length=None, base=None, offset=None, **kwargs):
     if close is None: return
 
     # Calculate Result
-    p = close / close.rolling(length).sum()
-    entropy = (-p * npLog(p) / npLog(base)).rolling(length).sum()
+    gdf_obj = cudf.DataFrame({'close': close})
+    p = gdf_obj['close'] / gdf_obj['close'].rolling(window=length).sum()
+    entropy = cus_entropy(p, base=base, window=length)
 
     # Offset
     if offset != 0:
@@ -52,7 +57,7 @@ Calculation:
     E = SUM(-P * npLog(P) / npLog(base), length)
 
 Args:
-    close (pd.Series): Series of 'close's
+    close (pd.Series or cudf.Series): Series of 'close's
     length (int): It's period. Default: 10
     base (float): Logarithmic Base. Default: 2
     offset (int): How many periods to offset the result. Default: 0
@@ -62,5 +67,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    pd.Series or cudf.Series: New feature generated.
 """

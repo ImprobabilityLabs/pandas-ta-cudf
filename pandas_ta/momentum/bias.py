@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import cudf
 from pandas_ta.overlap import ma
 from pandas_ta.utils import get_offset, verify_series
 
@@ -14,6 +15,7 @@ def bias(close, length=None, mamode=None, offset=None, **kwargs):
     if close is None: return
 
     # Calculate Result
+    close = cudf.Series(close)
     bma = ma(mamode, close, length=length, **kwargs)
     bias = (close / bma) - 1
 

@@ -1,8 +1,11 @@
+Here is the refactored code to work with CuDF and CUDA:
+```
 # -*- coding: utf-8 -*-
-from numpy import nan as npNaN
-from pandas import Series
-from pandas_ta.utils import get_drift, get_offset, verify_series
-
+import cucim
+import cupy
+import cudf
+from numba import cuda
+from cucim.utils import get_drift, get_offset, verify_series
 
 def vidya(close, length=None, drift=None, offset=None, **kwargs):
     """Indicator: Variable Index Dynamic Average (VIDYA)"""
@@ -14,16 +17,11 @@ def vidya(close, length=None, drift=None, offset=None, **kwargs):
 
     if close is None: return
 
-    def _cmo(source: Series, n:int , d: int):
-        """Chande Momentum Oscillator (CMO) Patch
-        For some reason: from pandas_ta.momentum import cmo causes
-        pandas_ta.momentum.coppock to not be able to import it's
-        wma like from pandas_ta.overlap import wma?
-        Weird Circular TypeError!?!
-        """
+    def _cmo(source: cudf.Series, n: int, d: int):
+        """Chande Momentum Oscillator (CMO) Patch"""
         mom = source.diff(d)
-        positive = mom.copy().clip(lower=0)
-        negative = mom.copy().clip(upper=0).abs()
+        positive = mom.clip(lower=0)
+        negative = mom.clip(upper=0).abs()
         pos_sum = positive.rolling(n).sum()
         neg_sum = negative.rolling(n).sum()
         return (pos_sum - neg_sum) / (pos_sum + neg_sum)
@@ -32,10 +30,10 @@ def vidya(close, length=None, drift=None, offset=None, **kwargs):
     m = close.size
     alpha = 2 / (length + 1)
     abs_cmo = _cmo(close, length, drift).abs()
-    vidya = Series(0, index=close.index)
+    vidya = cudf.Series(0, index=close.index)
     for i in range(length, m):
         vidya.iloc[i] = alpha * abs_cmo.iloc[i] * close.iloc[i] + vidya.iloc[i - 1] * (1 - alpha * abs_cmo.iloc[i])
-    vidya.replace({0: npNaN}, inplace=True)
+    vidya.replace({0: cupy.nan}, inplace=True)
 
     # Offset
     if offset != 0:
@@ -52,7 +50,6 @@ def vidya(close, length=None, drift=None, offset=None, **kwargs):
     vidya.category = "overlap"
 
     return vidya
-
 
 vidya.__doc__ = \
 """Variable Index Dynamic Average (VIDYA)
@@ -72,12 +69,12 @@ Calculation:
         length=10, adjust=False, sma=True
     if sma:
         sma_nth = close[0:length].sum() / length
-        close[:length - 1] = np.NaN
+        close[:length - 1] = cupy.nan
         close.iloc[length - 1] = sma_nth
     EMA = close.ewm(span=length, adjust=adjust).mean()
 
 Args:
-    close (pd.Series): Series of 'close's
+    close (cudf.Series): Series of 'close's
     length (int): It's period. Default: 14
     offset (int): How many periods to offset the result. Default: 0
 
@@ -89,5 +86,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cudf.Series: New feature generated.
 """

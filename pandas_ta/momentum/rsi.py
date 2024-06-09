@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from pandas import DataFrame, concat
+from cudf import DataFrame as CUDF
 from pandas_ta import Imports
 from pandas_ta.overlap import rma
 from pandas_ta.utils import get_drift, get_offset, verify_series, signals
@@ -49,21 +49,20 @@ def rsi(close, length=None, scalar=None, talib=None, drift=None, offset=None, **
 
     signal_indicators = kwargs.pop("signal_indicators", False)
     if signal_indicators:
-        signalsdf = concat(
-            [
-                DataFrame({rsi.name: rsi}),
-                signals(
-                    indicator=rsi,
-                    xa=kwargs.pop("xa", 80),
-                    xb=kwargs.pop("xb", 20),
-                    xserie=kwargs.pop("xserie", None),
-                    xserie_a=kwargs.pop("xserie_a", None),
-                    xserie_b=kwargs.pop("xserie_b", None),
-                    cross_values=kwargs.pop("cross_values", False),
-                    cross_series=kwargs.pop("cross_series", True),
-                    offset=offset,
-                ),
-            ],
+        signalsdf = CUDF({
+            rsi.name: rsi
+        }).merge(
+            signals(
+                indicator=rsi,
+                xa=kwargs.pop("xa", 80),
+                xb=kwargs.pop("xb", 20),
+                xserie=kwargs.pop("xserie", None),
+                xserie_a=kwargs.pop("xserie_a", None),
+                xserie_b=kwargs.pop("xserie_b", None),
+                cross_values=kwargs.pop("cross_values", False),
+                cross_series=kwargs.pop("cross_series", True),
+                offset=offset,
+            ).to_cudf(),
             axis=1,
         )
 
@@ -111,4 +110,3 @@ Kwargs:
 
 Returns:
     pd.Series: New feature generated.
-"""

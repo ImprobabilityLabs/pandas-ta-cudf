@@ -1,8 +1,9 @@
-# -*- coding: utf-8 -*-
-from pandas import date_range, DataFrame, RangeIndex, Timedelta
-from .midprice import midprice
-from pandas_ta.utils import get_offset, verify_series
+import cudf
+from cupy import get_default_memory_pool
+pool = get_default_memory_pool()
 
+def midprice(high, low, length):
+    return (high.rolling(window=length).max() + low.rolling(window=length).min()) / 2
 
 def ichimoku(high, low, close, tenkan=None, kijun=None, senkou=None, include_chikou=True, offset=None, **kwargs):
     """Indicator: Ichimoku Kinkō Hyō (Ichimoku)"""
@@ -10,9 +11,9 @@ def ichimoku(high, low, close, tenkan=None, kijun=None, senkou=None, include_chi
     kijun = int(kijun) if kijun and kijun > 0 else 26
     senkou = int(senkou) if senkou and senkou > 0 else 52
     _length = max(tenkan, kijun, senkou)
-    high = verify_series(high, _length)
-    low = verify_series(low, _length)
-    close = verify_series(close, _length)
+    high = high.rolling(window=_length).max()
+    low = low.rolling(window=_length).min()
+    close = close
     offset = get_offset(offset)
     if not kwargs.get("lookahead", True):
         include_chikou = False
@@ -20,10 +21,10 @@ def ichimoku(high, low, close, tenkan=None, kijun=None, senkou=None, include_chi
     if high is None or low is None or close is None: return None, None
 
     # Calculate Result
-    tenkan_sen = midprice(high=high, low=low, length=tenkan)
-    kijun_sen = midprice(high=high, low=low, length=kijun)
+    tenkan_sen = midprice(high, low, length=tenkan)
+    kijun_sen = midprice(high, low, length=kijun)
     span_a = 0.5 * (tenkan_sen + kijun_sen)
-    span_b = midprice(high=high, low=low, length=senkou)
+    span_b = midprice(high, low, length=senkou)
 
     # Copy Span A and B values before their shift
     _span_a = span_a[-kijun:].copy()
@@ -71,21 +72,21 @@ def ichimoku(high, low, close, tenkan=None, kijun=None, senkou=None, include_chi
     if include_chikou:
         data[chikou_span.name] = chikou_span
 
-    ichimokudf = DataFrame(data)
+    ichimokudf = cudf.DataFrame(data)
     ichimokudf.name = f"ICHIMOKU_{tenkan}_{kijun}_{senkou}"
     ichimokudf.category = "overlap"
 
     # Prepare Span DataFrame
     last = close.index[-1]
     if close.index.dtype == "int64":
-        ext_index = RangeIndex(start=last + 1, stop=last + kijun + 1)
-        spandf = DataFrame(index=ext_index, columns=[span_a.name, span_b.name])
+        ext_index = cudf.RangeIndex(start=last + 1, stop=last + kijun + 1)
+        spandf = cudf.DataFrame(index=ext_index, columns=[span_a.name, span_b.name])
         _span_a.index = _span_b.index = ext_index
     else:
         df_freq = close.index.value_counts().mode()[0]
-        tdelta = Timedelta(df_freq, unit="d")
-        new_dt = date_range(start=last + tdelta, periods=kijun, freq="B")
-        spandf = DataFrame(index=new_dt, columns=[span_a.name, span_b.name])
+        tdelta = cudf.Timedelta(df_freq, unit="d")
+        new_dt = cudf.date_range(start=last + tdelta, periods=kijun, freq="B")
+        spandf = cudf.DataFrame(index=new_dt, columns=[span_a.name, span_b.name])
         _span_a.index = _span_b.index = new_dt
 
     spandf[span_a.name] = _span_a
@@ -94,47 +95,3 @@ def ichimoku(high, low, close, tenkan=None, kijun=None, senkou=None, include_chi
     spandf.category = "overlap"
 
     return ichimokudf, spandf
-
-
-ichimoku.__doc__ = \
-"""Ichimoku Kinkō Hyō (ichimoku)
-
-Developed Pre WWII as a forecasting model for financial markets.
-
-Sources:
-    https://www.tradingtechnologies.com/help/x-study/technical-indicator-definitions/ichimoku-ich/
-
-Calculation:
-    Default Inputs:
-        tenkan=9, kijun=26, senkou=52
-    MIDPRICE = Midprice
-    TENKAN_SEN = MIDPRICE(high, low, close, length=tenkan)
-    KIJUN_SEN = MIDPRICE(high, low, close, length=kijun)
-    CHIKOU_SPAN = close.shift(-kijun)
-
-    SPAN_A = 0.5 * (TENKAN_SEN + KIJUN_SEN)
-    SPAN_A = SPAN_A.shift(kijun)
-
-    SPAN_B = MIDPRICE(high, low, close, length=senkou)
-    SPAN_B = SPAN_B.shift(kijun)
-
-Args:
-    high (pd.Series): Series of 'high's
-    low (pd.Series): Series of 'low's
-    close (pd.Series): Series of 'close's
-    tenkan (int): Tenkan period. Default: 9
-    kijun (int): Kijun period. Default: 26
-    senkou (int): Senkou period. Default: 52
-    include_chikou (bool): Whether to include chikou component. Default: True
-    offset (int): How many periods to offset the result. Default: 0
-
-Kwargs:
-    fillna (value, optional): pd.DataFrame.fillna(value)
-    fill_method (value, optional): Type of fill method
-
-Returns:
-    pd.DataFrame: Two DataFrames.
-        For the visible period: spanA, spanB, tenkan_sen, kijun_sen,
-            and chikou_span columns
-        For the forward looking period: spanA and spanB columns
-"""

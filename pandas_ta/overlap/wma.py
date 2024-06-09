@@ -1,8 +1,10 @@
+Here is the refactored code to work with CuDF and CUDA:
+```
 # -*- coding: utf-8 -*-
-from pandas import Series
+import cucim
+from cudf import Series
 from pandas_ta import Imports
 from pandas_ta.utils import get_offset, verify_series
-
 
 def wma(close, length=None, asc=None, talib=None, offset=None, **kwargs):
     """Indicator: Weighted Moving Average (WMA)"""
@@ -20,16 +22,14 @@ def wma(close, length=None, asc=None, talib=None, offset=None, **kwargs):
         from talib import WMA
         wma = WMA(close, length)
     else:
-        from numpy import arange as npArange
-        from numpy import dot as npDot
-
+        import cupy as cp
         total_weight = 0.5 * length * (length + 1)
-        weights_ = Series(npArange(1, length + 1))
+        weights_ = Series(cp.arange(1, length + 1))
         weights = weights_ if asc else weights_[::-1]
 
         def linear(w):
             def _compute(x):
-                return npDot(x, w) / total_weight
+                return cp.dot(x, w) / total_weight
             return _compute
 
         close_ = close.rolling(length, min_periods=length)
@@ -76,7 +76,7 @@ Calculation:
     WMA = close.rolling(length)_.apply(linear_weights(weights), raw=True)
 
 Args:
-    close (pd.Series): Series of 'close's
+    close (cudf.Series): Series of 'close's
     length (int): It's period. Default: 10
     asc (bool): Recent values weigh more. Default: True
     talib (bool): If TA Lib is installed and talib is True, Returns the TA Lib
@@ -88,5 +88,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cudf.Series: New feature generated.
 """

@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import cudf
 from pandas_ta.utils import get_drift, get_offset, is_percent, verify_series
 
 def increasing(close, length=None, strict=None, asint=None, percent=None, drift=None, offset=None, **kwargs):
@@ -22,8 +23,7 @@ def increasing(close, length=None, strict=None, asint=None, percent=None, drift=
         for x in range(3, length + 1):
             increasing = increasing & (close.shift(x - (drift + 1)) > close_.shift(x - drift))
 
-        increasing.fillna(0, inplace=True)
-        increasing = increasing.astype(bool)
+        increasing = increasing.fillna(0).astype(bool)
     else:
         increasing = close_.diff(length) > 0
 
@@ -67,7 +67,7 @@ Calculation:
         increasing = increasing.astype(int)
 
 Args:
-    close (pd.Series): Series of 'close's
+    close (cudf.Series): Series of 'close's
     length (int): It's period. Default: 1
     strict (bool): If True, checks if the series is continuously increasing over the period. Default: False
     percent (float): Percent as an integer. Default: None
@@ -76,9 +76,9 @@ Args:
     offset (int): How many periods to offset the result. Default: 0
 
 Kwargs:
-    fillna (value, optional): pd.DataFrame.fillna(value)
+    fillna (value, optional): cudf.DataFrame.fillna(value)
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cudf.Series: New feature generated.
 """

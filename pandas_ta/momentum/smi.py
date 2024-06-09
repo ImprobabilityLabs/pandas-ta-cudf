@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
-from pandas import DataFrame
-from .tsi import tsi
-from pandas_ta.overlap import ema
-from pandas_ta.utils import get_offset, verify_series
-
+import cudf
+from cuml.tsa.tsi import tsi as cuda_tsi
+from cuml.ta.overlap import ema as cuda_ema
+from cuml.ta.utils import get_offset, verify_series as verify_cuda_series
 
 def smi(close, fast=None, slow=None, signal=None, scalar=None, offset=None, **kwargs):
     """Indicator: SMI Ergodic Indicator (SMIIO)"""
@@ -14,13 +13,13 @@ def smi(close, fast=None, slow=None, signal=None, scalar=None, offset=None, **kw
     if slow < fast:
         fast, slow = slow, fast
     scalar = float(scalar) if scalar else 1
-    close = verify_series(close, max(fast, slow, signal))
+    close = verify_cuda_series(close, max(fast, slow, signal))
     offset = get_offset(offset)
 
     if close is None: return
 
     # Calculate Result
-    tsi_df = tsi(close, fast=fast, slow=slow, signal=signal, scalar=scalar)
+    tsi_df = cuda_tsi(close, fast=fast, slow=slow, signal=signal, scalar=scalar)
     smi = tsi_df.iloc[:, 0]
     signalma = tsi_df.iloc[:, 1]
     osc = smi - signalma
@@ -51,51 +50,8 @@ def smi(close, fast=None, slow=None, signal=None, scalar=None, offset=None, **kw
 
     # Prepare DataFrame to return
     data = {smi.name: smi, signalma.name: signalma, osc.name: osc}
-    df = DataFrame(data)
+    df = cudf.DataFrame(data)
     df.name = f"SMI{_props}"
     df.category = smi.category
 
     return df
-
-
-smi.__doc__ = \
-"""SMI Ergodic Indicator (SMI)
-
-The SMI Ergodic Indicator is the same as the True Strength Index (TSI) developed
-by William Blau, except the SMI includes a signal line. The SMI uses double
-moving averages of price minus previous price over 2 time frames. The signal
-line, which is an EMA of the SMI, is plotted to help trigger trading signals.
-The trend is bullish when crossing above zero and bearish when crossing below
-zero. This implementation includes both the SMI Ergodic Indicator and SMI
-Ergodic Oscillator.
-
-Sources:
-    https://www.motivewave.com/studies/smi_ergodic_indicator.htm
-    https://www.tradingview.com/script/Xh5Q0une-SMI-Ergodic-Oscillator/
-    https://www.tradingview.com/script/cwrgy4fw-SMIIO/
-
-Calculation:
-    Default Inputs:
-        fast=5, slow=20, signal=5
-    TSI = True Strength Index
-    EMA = Exponential Moving Average
-
-    ERG = TSI(close, fast, slow)
-    Signal = EMA(ERG, signal)
-    OSC = ERG - Signal
-
-Args:
-    close (pd.Series): Series of 'close's
-    fast (int): The short period. Default: 5
-    slow (int): The long period. Default: 20
-    signal (int): The signal period. Default: 5
-    scalar (float): How much to magnify. Default: 1
-    offset (int): How many periods to offset the result. Default: 0
-
-Kwargs:
-    fillna (value, optional): pd.DataFrame.fillna(value)
-    fill_method (value, optional): Type of fill method
-
-Returns:
-    pd.DataFrame: smi, signal, oscillator columns.
-"""

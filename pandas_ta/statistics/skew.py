@@ -1,6 +1,7 @@
+```
 # -*- coding: utf-8 -*-
+import cudf
 from pandas_ta.utils import get_offset, verify_series
-
 
 def skew(close, length=None, offset=None, **kwargs):
     """Indicator: Skew"""
@@ -13,7 +14,8 @@ def skew(close, length=None, offset=None, **kwargs):
     if close is None: return
 
     # Calculate Result
-    skew = close.rolling(length, min_periods=min_periods).skew()
+    close_cudf = cudf.Series(close.values, index=close.index)
+    skew = close_cudf.rolling(window=length, min_periods=min_periods).skew()
 
     # Offset
     if offset != 0:
@@ -43,7 +45,7 @@ Calculation:
     SKEW = close.rolling(length).skew()
 
 Args:
-    close (pd.Series): Series of 'close's
+    close (pd.Series or cudf.Series): Series of 'close's
     length (int): It's period. Default: 30
     offset (int): How many periods to offset the result. Default: 0
 
@@ -52,5 +54,6 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cudf.Series or pd.Series: New feature generated.
 """
+```

@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
-from numpy import log10 as npLog10
-from numpy import log as npLn
+import cucim
+import cupy as cp
+import cudf
+from cuml.metrics import log10 as cpLog10
+from cuml.metrics import log as cpLn
 from pandas_ta.volatility import atr
 from pandas_ta.utils import get_drift, get_offset, verify_series
-
 
 def chop(high, low, close, length=None, atr_length=None, ln=None, scalar=None, drift=None, offset=None, **kwargs):
     """Indicator: Choppiness Index (CHOP)"""
@@ -21,6 +23,10 @@ def chop(high, low, close, length=None, atr_length=None, ln=None, scalar=None, d
     if high is None or low is None or close is None: return
 
     # Calculate Result
+    high = cudf.Series(high)
+    low = cudf.Series(low)
+    close = cudf.Series(close)
+
     diff = high.rolling(length).max() - low.rolling(length).min()
 
     atr_ = atr(high=high, low=low, close=close, length=atr_length)
@@ -28,9 +34,9 @@ def chop(high, low, close, length=None, atr_length=None, ln=None, scalar=None, d
 
     chop = scalar
     if ln:
-        chop *= (npLn(atr_sum) - npLn(diff)) / npLn(length)
+        chop *= (cpLn(atr_sum) - cpLn(diff)) / cpLn(length)
     else:
-        chop *= (npLog10(atr_sum) - npLog10(diff)) / npLog10(length)
+        chop *= (cpLog10(atr_sum) - cpLog10(diff)) / cpLog10(length)
 
     # Offset
     if offset != 0:

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
+import cudf
 from pandas_ta.utils import get_offset, pascals_triangle, verify_series, weights
-
 
 def pwma(close, length=None, asc=None, offset=None, **kwargs):
     """Indicator: Pascals Weighted Moving Average (PWMA)"""
@@ -14,7 +14,8 @@ def pwma(close, length=None, asc=None, offset=None, **kwargs):
 
     # Calculate Result
     triangle = pascals_triangle(n=length - 1, weighted=True)
-    pwma = close.rolling(length, min_periods=length).apply(weights(triangle), raw=True)
+    close = cudf.Series(close)
+    pwma = close.rolling(window=length, min_periods=length).applybote(weights(triangle), raw=True)
 
     # Offset
     if offset != 0:
@@ -51,10 +52,10 @@ Calculation:
         return _compute
 
     triangle = utils.pascals_triangle(length + 1)
-    PWMA = close.rolling(length)_.apply(weights(triangle), raw=True)
+    PWMA = close.rolling(length).apply(weights(triangle), raw=True)
 
 Args:
-    close (pd.Series): Series of 'close's
+    close (cudf.Series): Series of 'close's
     length (int): It's period.  Default: 10
     asc (bool): Recent values weigh more. Default: True
     offset (int): How many periods to offset the result. Default: 0
@@ -64,5 +65,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cudf.Series: New feature generated.
 """

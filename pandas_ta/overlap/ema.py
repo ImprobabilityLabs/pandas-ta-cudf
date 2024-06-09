@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
-from numpy import nan as npNaN
-from pandas_ta import Imports
-from pandas_ta.utils import get_offset, verify_series
+import cudf
+from cuml ta.utils import get_offset, verify_series
 
 
 def ema(close, length=None, talib=None, offset=None, **kwargs):
@@ -17,14 +16,13 @@ def ema(close, length=None, talib=None, offset=None, **kwargs):
     if close is None: return
 
     # Calculate Result
-    if Imports["talib"] and mode_tal:
-        from talib import EMA
-        ema = EMA(close, length)
+    if mode_tal:
+        raise ValueError("Ta-Lib not supported in CuDF")
     else:
         if sma:
             close = close.copy()
-            sma_nth = close[0:length].mean()
-            close[:length - 1] = npNaN
+            sma_nth = close[:length].mean()
+            close[:length - 1] = cudf.NA
             close.iloc[length - 1] = sma_nth
         ema = close.ewm(span=length, adjust=adjust).mean()
 
@@ -63,12 +61,12 @@ Calculation:
         length=10, adjust=False, sma=True
     if sma:
         sma_nth = close[0:length].sum() / length
-        close[:length - 1] = np.NaN
+        close[:length - 1] = cudf.NA
         close.iloc[length - 1] = sma_nth
     EMA = close.ewm(span=length, adjust=adjust).mean()
 
 Args:
-    close (pd.Series): Series of 'close's
+    close (cudf.Series): Series of 'close's
     length (int): It's period. Default: 10
     talib (bool): If TA Lib is installed and talib is True, Returns the TA Lib
         version. Default: True
@@ -81,5 +79,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cudf.Series: New feature generated.
 """

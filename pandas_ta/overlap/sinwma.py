@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
-from numpy import pi as npPi
-from numpy import sin as npSin
-from pandas import Series
+import cudf
+import cudf.ta as cta
+import numpy as np
 from pandas_ta.utils import get_offset, verify_series, weights
-
 
 def sinwma(close, length=None, offset=None, **kwargs):
     """Indicator: Sine Weighted Moving Average (SINWMA) by Everget of TradingView"""
@@ -15,10 +14,11 @@ def sinwma(close, length=None, offset=None, **kwargs):
     if close is None: return
 
     # Calculate Result
-    sines = Series([npSin((i + 1) * npPi / (length + 1)) for i in range(0, length)])
+    sines = cudf.Series([np.sin((i + 1) * np.pi / (length + 1)) for i in range(0, length)])
     w = sines / sines.sum()
 
-    sinwma = close.rolling(length, min_periods=length).apply(weights(w), raw=True)
+    close = cudf.Series(close)
+    sinwma = close.rolling(window=length, min_periods=length).apply(lambda x: weights(w)(x))
 
     # Offset
     if offset != 0:
@@ -32,7 +32,7 @@ def sinwma(close, length=None, offset=None, **kwargs):
 
     # Name & Category
     sinwma.name = f"SINWMA_{length}"
-    sinwma.category = "overlap"
+    sinwma.__dict__['category'] = "overlap"
 
     return sinwma
 

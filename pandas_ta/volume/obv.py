@@ -1,23 +1,21 @@
 # -*- coding: utf-8 -*-
-from pandas_ta import Imports
+import cudf
 from pandas_ta.utils import get_offset, signed_series, verify_series
-
 
 def obv(close, volume, talib=None, offset=None, **kwargs):
     """Indicator: On Balance Volume (OBV)"""
     # Validate arguments
-    close = verify_series(close)
-    volume = verify_series(volume)
+    close = verify_series(close).reset_index(drop=True)
+    volume = verify_series(volume).reset_index(drop=True)
     offset = get_offset(offset)
     mode_tal = bool(talib) if isinstance(talib, bool) else True
 
     # Calculate Result
-    if Imports["talib"] and mode_tal:
-        from talib import OBV
-        obv = OBV(close, volume)
-    else:
+    if mode_tal:
         signed_volume = signed_series(close, initial=1) * volume
         obv = signed_volume.cumsum()
+    else:
+        raise NotImplementedError("CuDF does not support TA Lib. Using CuDF version only.")
 
     # Offset
     if offset != 0:
@@ -52,8 +50,8 @@ Calculation:
     obv = signed_volume.cumsum()
 
 Args:
-    close (pd.Series): Series of 'close's
-    volume (pd.Series): Series of 'volume's
+    close (cuDF.Series): Series of 'close's
+    volume (cuDF.Series): Series of 'volume's
     talib (bool): If TA Lib is installed and talib is True, Returns the TA Lib
         version. Default: True
     offset (int): How many periods to offset the result. Default: 0
@@ -63,5 +61,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cuDF.Series: New feature generated.
 """

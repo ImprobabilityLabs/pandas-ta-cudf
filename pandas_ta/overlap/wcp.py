@@ -1,7 +1,9 @@
+Here is the refactored code to work with CuDF and CUDA:
+```
 # -*- coding: utf-8 -*-
-from pandas_ta import Imports
-from pandas_ta.utils import get_offset, verify_series
-
+import cudf
+from cudf_ta import Imports
+from cudf_ta.utils import get_offset, verify_series
 
 def wcp(high, low, close, talib=None, offset=None, **kwargs):
     """Indicator: Weighted Closing Price (WCP)"""
@@ -35,7 +37,6 @@ def wcp(high, low, close, talib=None, offset=None, **kwargs):
 
     return wcp
 
-
 wcp.__doc__ = \
 """Weighted Closing Price (WCP)
 
@@ -49,17 +50,17 @@ Calculation:
     WCP = (2 * close + high + low) / 4
 
 Args:
-    high (pd.Series): Series of 'high's
-    low (pd.Series): Series of 'low's
-    close (pd.Series): Series of 'close's
+    high (cuDF.Series): Series of 'high's
+    low (cuDF.Series): Series of 'low's
+    close (cuDF.Series): Series of 'close's
     talib (bool): If TA Lib is installed and talib is True, Returns the TA Lib
         version. Default: True
     offset (int): How many periods to offset the result. Default: 0
 
 Kwargs:
-    fillna (value, optional): pd.DataFrame.fillna(value)
+    fillna (value, optional): cuDF.DataFrame.fillna(value)
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cuDF.Series: New feature generated.
 """

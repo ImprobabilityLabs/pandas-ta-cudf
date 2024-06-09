@@ -1,7 +1,8 @@
+```
 # -*- coding: utf-8 -*-
-from numpy import sign as npSign
+import cudf
+from cuml.metrics import sign as cuSign
 from pandas_ta.utils import get_drift, get_offset, verify_series
-
 
 def psl(close, open_=None, length=None, scalar=None, drift=None, offset=None, **kwargs):
     """Indicator: Psychological Line (PSL)"""
@@ -17,14 +18,14 @@ def psl(close, open_=None, length=None, scalar=None, drift=None, offset=None, **
     # Calculate Result
     if open_ is not None:
         open_ = verify_series(open_)
-        diff = npSign(close - open_)
+        diff = cuSign(close - open_)
     else:
-        diff = npSign(close.diff(drift))
+        diff = cuSign(close.diff(drift))
 
     diff.fillna(0, inplace=True)
     diff[diff <= 0] = 0  # Zero negative values
 
-    psl = scalar * diff.rolling(length).sum()
+    psl = scalar * diff.rolling(window=length).sum()
     psl /= length
 
     # Offset
@@ -71,8 +72,8 @@ Calculation:
     PSL = scalar * SUM(DIFF, length) / length
 
 Args:
-    close (pd.Series): Series of 'close's
-    open_ (pd.Series, optional): Series of 'open's
+    close (cudf.Series): Series of 'close's
+    open_ (cudf.Series, optional): Series of 'open's
     length (int): It's period. Default: 12
     scalar (float): How much to magnify. Default: 100
     drift (int): The difference period. Default: 1
@@ -83,5 +84,6 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cudf.Series: New feature generated.
 """
+```

@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import cudf
 from pandas_ta.utils import get_offset, verify_series
 
 
@@ -51,7 +52,7 @@ Calculation:
     CUMPCTRET = PCTRET.cumsum() if cumulative
 
 Args:
-    close (pd.Series): Series of 'close's
+    close (cudf.Series): Series of 'close's
     length (int): It's period. Default: 20
     cumulative (bool): If True, returns the cumulative returns. Default: False
     offset (int): How many periods to offset the result. Default: 0
@@ -61,5 +62,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cudf.Series: New feature generated.
 """

@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import cudf
 from .mom import mom
 from pandas_ta import Imports
 from pandas_ta.utils import get_offset, verify_series
@@ -18,25 +19,26 @@ def roc(close, length=None, scalar=None, talib=None, offset=None, **kwargs):
     # Calculate Result
     if Imports["talib"] and mode_tal:
         from talib import ROC
-        roc = ROC(close, length)
+        roc = ROC(cudf.Series(close), length)
     else:
-        roc = scalar * mom(close=close, length=length) / close.shift(length)
+        close_cu = cudf.Series(close)
+        roc_cu = scalar * mom(close=close_cu, length=length) / close_cu.shift(length)
 
     # Offset
     if offset != 0:
-        roc = roc.shift(offset)
+        roc_cu = roc_cu.shift(offset)
 
     # Handle fills
     if "fillna" in kwargs:
-        roc.fillna(kwargs["fillna"], inplace=True)
+        roc_cu.fillna(kwargs["fillna"], inplace=True)
     if "fill_method" in kwargs:
-        roc.fillna(method=kwargs["fill_method"], inplace=True)
+        roc_cu.fillna(method=kwargs["fill_method"], inplace=True)
 
     # Name and Categorize it
-    roc.name = f"ROC_{length}"
-    roc.category = "momentum"
+    roc_cu.name = f"ROC_{length}"
+    roc_cu.category = "momentum"
 
-    return roc
+    return roc_cu
 
 
 roc.__doc__ = \
@@ -56,7 +58,7 @@ Calculation:
     ROC = 100 * MOM(close, length) / close.shift(length)
 
 Args:
-    close (pd.Series): Series of 'close's
+    close (pd.Series or cudf.Series): Series of 'close's
     length (int): It's period. Default: 1
     scalar (float): How much to magnify. Default: 100
     talib (bool): If TA Lib is installed and talib is True, Returns the TA Lib
@@ -68,5 +70,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cudf.Series: New feature generated.
 """

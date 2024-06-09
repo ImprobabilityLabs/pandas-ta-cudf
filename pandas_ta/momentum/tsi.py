@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
-from pandas import DataFrame
-from pandas_ta.overlap import ema, ma
+import cudf
+from cudf.core._merge import concat
+from cuml.tsa.ema import EMA as cuEMA
+from cuml.tsa.ma import MA as cuMA
 from pandas_ta.utils import get_drift, get_offset, verify_series
 
 
@@ -10,8 +12,6 @@ def tsi(close, fast=None, slow=None, signal=None, scalar=None, mamode=None, drif
     fast = int(fast) if fast and fast > 0 else 13
     slow = int(slow) if slow and slow > 0 else 25
     signal = int(signal) if signal and signal > 0 else 13
-    # if slow < fast:
-    #     fast, slow = slow, fast
     scalar = float(scalar) if scalar else 100
     close = verify_series(close, max(fast, slow))
     drift = get_drift(drift)
@@ -22,16 +22,20 @@ def tsi(close, fast=None, slow=None, signal=None, scalar=None, mamode=None, drif
     if close is None: return
 
     # Calculate Result
-    diff = close.diff(drift)
-    slow_ema = ema(close=diff, length=slow, **kwargs)
-    fast_slow_ema = ema(close=slow_ema, length=fast, **kwargs)
+    close_cudf = cudf.Series(close)
+    diff = close_cudf.diff(drift)
+    slow_ema = cuEMA(close=diff, window=slow)
+    fast_slow_ema = cuEMA(close=slow_ema, window=fast)
 
     abs_diff = diff.abs()
-    abs_slow_ema = ema(close=abs_diff, length=slow, **kwargs)
-    abs_fast_slow_ema = ema(close=abs_slow_ema, length=fast, **kwargs)
+    abs_slow_ema = cuEMA(close=abs_diff, window=slow)
+    abs_fast_slow_ema = cuEMA(close=abs_slow_ema, window=fast)
 
     tsi = scalar * fast_slow_ema / abs_fast_slow_ema
-    tsi_signal = ma(mamode, tsi, length=signal)
+    if mamode == "ema":
+        tsi_signal = cuEMA(close=tsi, window=signal)
+    else:
+        tsi_signal = cuMA(close=tsi, window=signal)
 
     # Offset
     if offset != 0:
@@ -52,7 +56,7 @@ def tsi(close, fast=None, slow=None, signal=None, scalar=None, mamode=None, drif
     tsi.category = tsi_signal.category =  "momentum"
 
     # Prepare DataFrame to return
-    df = DataFrame({tsi.name: tsi, tsi_signal.name: tsi_signal})
+    df = concat([tsi, tsi_signal], axis=1)
     df.name = f"TSI_{fast}_{slow}_{signal}"
     df.category = "momentum"
 

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
+import cudf
+from cucim import cuda
 from pandas_ta.utils import get_drift, get_offset, non_zero_range, verify_series
-
 
 def pdist(open_, high, low, close, drift=None, offset=None, **kwargs):
     """Indicator: Price Distance (PDIST)"""
@@ -13,6 +14,7 @@ def pdist(open_, high, low, close, drift=None, offset=None, **kwargs):
     offset = get_offset(offset)
 
     # Calculate Result
+    open_, high, low, close = open_.to_cuda(), high.to_cuda(), low.to_cuda(), close.to_cuda()
     pdist = 2 * non_zero_range(high, low)
     pdist += non_zero_range(open_, close.shift(drift)).abs()
     pdist -= non_zero_range(close, open_).abs()
@@ -49,10 +51,10 @@ Calculation:
     PDIST = 2(high - low) - ABS(close - open) + ABS(open - close[drift])
 
 Args:
-    open_ (pd.Series): Series of 'opens's
-    high (pd.Series): Series of 'high's
-    low (pd.Series): Series of 'low's
-    close (pd.Series): Series of 'close's
+    open_ (pd.Series or cudf.Series): Series of 'opens's
+    high (pd.Series or cudf.Series): Series of 'high's
+    low (pd.Series or cudf.Series): Series of 'low's
+    close (pd.Series or cudf.Series): Series of 'close's
     drift (int): The difference period. Default: 1
     offset (int): How many periods to offset the result. Default: 0
 
@@ -61,5 +63,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    pd.Series or cudf.Series: New feature generated.
 """

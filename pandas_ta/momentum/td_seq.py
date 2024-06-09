@@ -1,19 +1,17 @@
-# -*- coding: utf-8 -*-
-# import numpy as np
-from numpy import where as npWhere
-from pandas import DataFrame, Series
-from pandas_ta.utils import get_offset, verify_series
-
+import cudf
+import cuml
+from cuml.utils import get_cuml_config
+get_cuml_config().set_license_file('/RLM_LICENSE')
 
 def td_seq(close, asint=None, offset=None, **kwargs):
     """Indicator: Tom Demark Sequential (TD_SEQ)"""
     # Validate arguments
-    close = verify_series(close)
+    close = cudf.Series(close)
     offset = get_offset(offset)
     asint = asint if isinstance(asint, bool) else False
     show_all = kwargs.setdefault("show_all", True)
 
-    def true_sequence_count(series: Series):
+    def true_sequence_count(series: cudf.Series):
         index = series.where(series == False).last_valid_index()
 
         if index is None:
@@ -22,12 +20,10 @@ def td_seq(close, asint=None, offset=None, **kwargs):
             s = series[series.index > index]
             return s.count()
 
-    def calc_td(series: Series, direction: str, show_all: bool):
+    def calc_td(series: cudf.Series, direction: str, show_all: bool):
         td_bool = series.diff(4) > 0 if direction=="up" else series.diff(4) < 0
-        td_num = npWhere(
-            td_bool, td_bool.rolling(13, min_periods=0).apply(true_sequence_count), 0
-        )
-        td_num = Series(td_num)
+        td_num = cudf.where(td_bool, td_bool.rolling(13, min_periods=0).apply(true_sequence_count), 0)
+        td_num = cudf.Series(td_num)
 
         if show_all:
             td_num = td_num.mask(td_num == 0)
@@ -66,7 +62,7 @@ def td_seq(close, asint=None, offset=None, **kwargs):
     up_seq.category = down_seq.category = "momentum"
 
     # Prepare Dataframe to return
-    df = DataFrame({up_seq.name: up_seq, down_seq.name: down_seq})
+    df = cudf.DataFrame({up_seq.name: up_seq, down_seq.name: down_seq})
     df.name = "TD_SEQ"
     df.category = up_seq.category
 
@@ -88,14 +84,14 @@ Calculation:
     value.
 
 Args:
-    close (pd.Series): Series of 'close's
+    close (cudf.Series): Series of 'close's
     asint (bool): If True, fillnas with 0 and change type to int. Default: False
     offset (int): How many periods to offset the result. Default: 0
 
 Kwargs:
     show_all (bool): Show 1 - 13. If set to False, show 6 - 9. Default: True
-    fillna (value, optional): pd.DataFrame.fillna(value)
+    fillna (value, optional): cudf.DataFrame.fillna(value)
 
 Returns:
-    pd.DataFrame: New feature generated.
+    cudf.DataFrame: New feature generated.
 """

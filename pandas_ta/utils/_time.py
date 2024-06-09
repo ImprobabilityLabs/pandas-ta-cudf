@@ -2,13 +2,15 @@
 from datetime import datetime
 from time import localtime, perf_counter
 from typing import Tuple
-
-from pandas import DataFrame, Timestamp
+import cudf
+import numpy as np
+from cudf.core.index import DatetimeIndex
+from numba.cuda import to_device
 
 from pandas_ta import EXCHANGE_TZ, RATE
 
 
-def df_dates(df: DataFrame, dates: Tuple[str, list] = None) -> DataFrame:
+def df_dates(df: cudf.DataFrame, dates: Tuple[str, list] = None) -> cudf.DataFrame:
     """Yields the DataFrame with the given dates"""
     if dates is None: return None
     if not isinstance(dates, list):
@@ -16,26 +18,28 @@ def df_dates(df: DataFrame, dates: Tuple[str, list] = None) -> DataFrame:
     return df[df.index.isin(dates)]
 
 
-def df_month_to_date(df: DataFrame) -> DataFrame:
+def df_month_to_date(df: cudf.DataFrame) -> cudf.DataFrame:
     """Yields the Month-to-Date (MTD) DataFrame"""
-    in_mtd = df.index >= Timestamp.now().strftime("%Y-%m-01")
+    now = cudf.Series([datetime.now()])
+    in_mtd = df.index >= now.dt.strftime("%Y-%m-01").iloc[0]
     if any(in_mtd): return df[in_mtd]
     return df
 
 
-def df_quarter_to_date(df: DataFrame) -> DataFrame:
+def df_quarter_to_date(df: cudf.DataFrame) -> cudf.DataFrame:
     """Yields the Quarter-to-Date (QTD) DataFrame"""
-    now = Timestamp.now()
+    now = cudf.Series([datetime.now()])
     for m in [1, 4, 7, 10]:
-        if now.month <= m:
-                in_qtr = df.index >= datetime(now.year, m, 1).strftime("%Y-%m-01")
-                if any(in_qtr): return df[in_qtr]
-    return df[df.index >= now.strftime("%Y-%m-01")]
+        if now.iloc[0].month <= m:
+            in_qtr = df.index >= datetime(now.iloc[0].year, m, 1).strftime("%Y-%m-01")
+            if any(in_qtr): return df[in_qtr]
+    return df[df.index >= now.iloc[0].strftime("%Y-%m-01")]
 
 
-def df_year_to_date(df: DataFrame) -> DataFrame:
+def df_year_to_date(df: cudf.DataFrame) -> cudf.DataFrame:
     """Yields the Year-to-Date (YTD) DataFrame"""
-    in_ytd = df.index >= Timestamp.now().strftime("%Y-01-01")
+    now = cudf.Series([datetime.now()])
+    in_ytd = df.index >= now.iloc[0].strftime("%Y-01-01")
     if any(in_ytd): return df[in_ytd]
     return df
 
@@ -55,8 +59,8 @@ def get_time(exchange: str = "NYSE", full:bool = True, to_string:bool = False) -
         exchange = exchange.upper()
         tz = EXCHANGE_TZ[exchange]
 
-    # today = Timestamp.utcnow()
-    today = Timestamp.now()
+    now = cudf.Series([datetime.now()])
+    today = now.iloc[0]
     date = f"{today.day_name()} {today.month_name()} {today.day}, {today.year}"
 
     _today = today.timetuple()
@@ -75,7 +79,7 @@ def get_time(exchange: str = "NYSE", full:bool = True, to_string:bool = False) -
     return s if to_string else print(s)
 
 
-def total_time(df: DataFrame, tf: str = "years") -> float:
+def total_time(df: cudf.DataFrame, tf: str = "years") -> float:
     """Calculates the total time of a DataFrame. Difference of the Last and
     First index. Options: 'months', 'weeks', 'days', 'hours', 'minutes'
     and 'seconds'. Default: 'years'.
@@ -96,7 +100,7 @@ def total_time(df: DataFrame, tf: str = "years") -> float:
     return TimeFrame["years"]
 
 
-def to_utc(df: DataFrame) -> DataFrame:
+def to_utc(df: cudf.DataFrame) -> cudf.DataFrame:
     """Either localizes the DataFrame Index to UTC or it applies
     tz_convert to set the Index to UTC.
     """

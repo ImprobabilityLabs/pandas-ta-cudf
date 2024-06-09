@@ -1,7 +1,7 @@
-# -*- coding: utf-8 -*-
-from pandas import Series
-from pandas_ta.utils import get_offset, verify_series
-
+import cudf
+from numba import cuda
+import numpy as np
+import pandas as pd
 
 def hwma(close, na=None, nb=None, nc=None, offset=None, **kwargs):
     """Indicator: Holt-Winter Moving Average"""
@@ -9,7 +9,7 @@ def hwma(close, na=None, nb=None, nc=None, offset=None, **kwargs):
     na = float(na) if na and na > 0 and na < 1 else 0.2
     nb = float(nb) if nb and nb > 0 and nb < 1 else 0.1
     nc = float(nc) if nc and nc > 0 and nc < 1 else 0.1
-    close = verify_series(close)
+    close = cudf.Series(close)
     offset = get_offset(offset)
 
     # Calculate Result
@@ -25,7 +25,7 @@ def hwma(close, na=None, nb=None, nc=None, offset=None, **kwargs):
         result.append((F + V + 0.5 * A))
         last_a, last_f, last_v = A, F, V # update values
 
-    hwma = Series(result, index=close.index)
+    hwma = cudf.Series(result, index=close.index)
 
     # Offset
     if offset != 0:
@@ -44,8 +44,6 @@ def hwma(close, na=None, nb=None, nc=None, offset=None, **kwargs):
 
     return hwma
 
-
-
 hwma.__doc__ = \
 """HWMA (Holt-Winter Moving Average)
 
@@ -53,7 +51,7 @@ Indicator HWMA (Holt-Winter Moving Average) is a three-parameter moving average
 by the Holt-Winter method; the three parameters should be selected to obtain a
 forecast.
 
-This version has been implemented for Pandas TA by rengel8 based
+This version has been implemented for CuDF TA by rengel8 based
 on a publication for MetaTrader 5.
 
 Sources:
@@ -67,16 +65,16 @@ Calculation:
     A[i] = (1-nc) * A[i-1] + nc * (V[i] - V[i-1])
 
 Args:
-    close (pd.Series): Series of 'close's
+    close (cudf.Series): Series of 'close's
     na (float): Smoothed series parameter (from 0 to 1). Default: 0.2
     nb (float): Trend parameter (from 0 to 1). Default: 0.1
     nc (float): Seasonality parameter (from 0 to 1). Default: 0.1
-    close (pd.Series): Series of 'close's
+    close (cudf.Series): Series of 'close's
 
 Kwargs:
     fillna (value, optional): pd.DataFrame.fillna(value)
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: hwma
+    cudf.Series: hwma
 """

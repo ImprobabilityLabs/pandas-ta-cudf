@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-from pandas import Series
+import cudf
+from cudf import Series
 from pandas_ta.overlap import linreg
 from pandas_ta.utils import get_offset, verify_series
 
@@ -12,6 +13,7 @@ def cti(close, length=None, offset=None, **kwargs) -> Series:
 
     if close is None: return
 
+    close = cudf.Series(close)
     cti = linreg(close, length=length, r=True)
 
     # Offset

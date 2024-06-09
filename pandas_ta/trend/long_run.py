@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
+import cudf
 from .decreasing import decreasing
 from .increasing import increasing
 from pandas_ta.utils import get_offset, verify_series
-
 
 def long_run(fast, slow, length=None, offset=None, **kwargs):
     """Indicator: Long Run"""
     # Validate Arguments
     length = int(length) if length and length > 0 else 2
-    fast = verify_series(fast, length)
-    slow = verify_series(slow, length)
+    fast = cudf.Series(verify_series(fast, length))
+    slow = cudf.Series(verify_series(slow, length))
     offset = get_offset(offset)
 
     if fast is None or slow is None: return
@@ -31,6 +31,6 @@ def long_run(fast, slow, length=None, offset=None, **kwargs):
 
     # Name and Categorize it
     long_run.name = f"LR_{length}"
-    long_run.category = "trend"
+    long_run.attrs["category"] = "trend"
 
     return long_run

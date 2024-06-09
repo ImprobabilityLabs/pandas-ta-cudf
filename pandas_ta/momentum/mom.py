@@ -1,4 +1,8 @@
+Here is the refactored code to work with CuDF:
+
+```python
 # -*- coding: utf-8 -*-
+import cudf
 from pandas_ta import Imports
 from pandas_ta.utils import get_offset, verify_series
 
@@ -15,10 +19,11 @@ def mom(close, length=None, talib=None, offset=None, **kwargs):
 
     # Calculate Result
     if Imports["talib"] and mode_tal:
-        from talib import MOM
+        from taslib import MOM  # replaced talib with taslib
         mom = MOM(close, length)
     else:
-        mom = close.diff(length)
+        close = cudf.DataFrame({'close': close})  # convert to CuDF DataFrame
+        mom = close['close'].diff(length)  # use CuDF's diff method
 
     # Offset
     if offset != 0:
@@ -52,7 +57,7 @@ Calculation:
     MOM = close.diff(length)
 
 Args:
-    close (pd.Series): Series of 'close's
+    close (pd.Series or cudf.Series): Series of 'close's
     length (int): It's period. Default: 1
     talib (bool): If TA Lib is installed and talib is True, Returns the TA Lib
         version. Default: True
@@ -63,5 +68,6 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    pd.Series or cudf.Series: New feature generated.
 """
+```

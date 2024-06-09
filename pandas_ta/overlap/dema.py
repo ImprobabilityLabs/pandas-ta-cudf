@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
+import cudf
 from .ema import ema
 from pandas_ta import Imports
 from pandas_ta.utils import get_offset, verify_series
-
 
 def dema(close, length=None, talib=None, offset=None, **kwargs):
     """Indicator: Double Exponential Moving Average (DEMA)"""
@@ -17,7 +17,7 @@ def dema(close, length=None, talib=None, offset=None, **kwargs):
     # Calculate Result
     if Imports["talib"] and mode_tal:
         from talib import DEMA
-        dema = DEMA(close, length)
+        dema = cudf.Series(DEMA(close.to_pandas(), length))
     else:
         ema1 = ema(close=close, length=length)
         ema2 = ema(close=ema1, length=length)
@@ -59,7 +59,7 @@ Calculation:
     DEMA = 2 * ema1 - ema2
 
 Args:
-    close (pd.Series): Series of 'close's
+    close (cuDF.Series): Series of 'close's
     length (int): It's period. Default: 10
     talib (bool): If TA Lib is installed and talib is True, Returns the TA Lib
         version. Default: True
@@ -70,5 +70,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cuDF.Series: New feature generated.
 """

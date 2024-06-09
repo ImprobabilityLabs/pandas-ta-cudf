@@ -1,9 +1,9 @@
-# -*- coding: utf-8 -*-
-from pandas_ta.overlap import ma
-from pandas_ta.statistics import stdev
-from pandas_ta.utils import get_drift, get_offset
-from pandas_ta.utils import unsigned_differences, verify_series
-
+```
+import cudf
+from cucim.ta.overlap import ma
+from cucim.ta.statistics import stdev
+from cucim.ta.utils import get_drift, get_offset
+from cucim.ta.utils import unsigned_differences, verify_series
 
 def rvi(close, high=None, low=None, length=None, scalar=None, refined=None, thirds=None, mamode=None, drift=None, offset=None, **kwargs):
     """Indicator: Relative Volatility Index (RVI)"""
@@ -96,9 +96,9 @@ Calculation:
     RVI = scalar * (UPSUM / (UPSUM + DOWNSUM))
 
 Args:
-    high (pd.Series): Series of 'high's
-    low (pd.Series): Series of 'low's
-    close (pd.Series): Series of 'close's
+    high (cudf.Series): Series of 'high's
+    low (cudf.Series): Series of 'low's
+    close (cudf.Series): Series of 'close's
     length (int): The short period. Default: 14
     scalar (float): A positive float to scale the bands. Default: 100
     refined (bool): Use 'refined' calculation which is the average of
@@ -112,5 +112,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.DataFrame: lower, basis, upper columns.
-"""
+    cudf.DataFrame: lower, basis, upper columns.
+```

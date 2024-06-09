@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
-from numpy import arctan as npAtan
-from numpy import pi as npPi
+import cudf
+from cuml.preprocessing import arctan as cuAtan
+from cuml.preprocessing import pi as cuPi
 from pandas_ta.utils import get_offset, verify_series
 
 
@@ -18,9 +19,9 @@ def slope( close, length=None, as_angle=None, to_degrees=None, vertical=None, of
     # Calculate Result
     slope = close.diff(length) / length
     if as_angle:
-        slope = slope.apply(npAtan)
+        slope = slope.apply(cuAtan)
         if to_degrees:
-            slope *= 180 / npPi
+            slope *= 180 / cuPi
 
     # Offset
     if offset != 0:
@@ -58,7 +59,7 @@ Calculation:
             slope *= 180 / PI
 
 Args:
-    close (pd.Series): Series of 'close's
+    close (cuDF.Series): Series of 'close's
     length (int): It's period.  Default: 1
     offset (int): How many periods to offset the result. Default: 0
 
@@ -69,5 +70,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cuDF.Series: New feature generated.
 """

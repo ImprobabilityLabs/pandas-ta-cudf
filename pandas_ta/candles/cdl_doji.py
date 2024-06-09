@@ -1,8 +1,7 @@
-# -*- coding: utf-8 -*-
-from pandas_ta.overlap import sma
-from pandas_ta.utils import get_offset, high_low_range, is_percent
-from pandas_ta.utils import real_body, verify_series
-
+from cudf import Series
+from cuDF.ta.overlap import sma
+from cuDF.ta.utils import get_offset, high_low_range, is_percent
+from cuDF.ta.utils import real_body, verify_series
 
 def cdl_doji(open_, high, low, close, length=None, factor=None, scalar=None, asint=True, offset=None, **kwargs):
     """Candle Type: Doji"""
@@ -68,10 +67,10 @@ Calculation:
     DOJI = scalar IF BODY < 0.01 * percent * SMA(HL_RANGE, length) ELSE 0
 
 Args:
-    open_ (pd.Series): Series of 'open's
-    high (pd.Series): Series of 'high's
-    low (pd.Series): Series of 'low's
-    close (pd.Series): Series of 'close's
+    open_ (cuDF.Series): Series of 'open's
+    high (cuDF.Series): Series of 'high's
+    low (cuDF.Series): Series of 'low's
+    close (cuDF.Series): Series of 'close's
     length (int): The period. Default: 10
     factor (float): Doji value. Default: 100
     scalar (float): How much to magnify. Default: 100
@@ -81,9 +80,9 @@ Kwargs:
     naive (bool, optional): If True, prefills potential Doji less than
         the length if less than a percentage of it's high-low range.
         Default: False
-    fillna (value, optional): pd.DataFrame.fillna(value)
+    fillna (value, optional): cuDF.DataFrame.fillna(value)
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: CDL_DOJI column.
+    cuDF.Series: CDL_DOJI column.
 """

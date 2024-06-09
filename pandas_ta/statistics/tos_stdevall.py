@@ -1,14 +1,13 @@
+Here is the refactored code that incorporates CuDF and other necessary CUDA-related changes:
+
+```python
 # -*- coding: utf-8 -*-
-from numpy import array as npArray
-from numpy import arange as npArange
-from numpy import polyfit as npPolyfit
-from numpy import std as npStd
-from pandas import DataFrame, DatetimeIndex, Series
-from .stdev import stdev as stdev
-from pandas_ta.utils import get_offset, verify_series
+import cudf
+from cuml.preprocessing.poly_regression import PolyRegression
+from cupy import sqrt
+from pandas import DatetimeIndex, Series
 
 def tos_stdevall(close, length=None, stds=None, ddof=None, offset=None, **kwargs):
-    """Indicator: TD Ameritrade's Think or Swim Standard Deviation All"""
     # Validate Arguments
     stds = stds if isinstance(stds, list) and len(stds) > 0 else [1, 2, 3]
     if min(stds) <= 0: return
@@ -32,15 +31,17 @@ def tos_stdevall(close, length=None, stds=None, ddof=None, offset=None, **kwargs
     # Calculate Result
     X = src_index = close.index
     if isinstance(close.index, DatetimeIndex):
-        X = npArange(length)
-        close = npArray(close)
+        X = cudf.Series(arange(length))
+        close = cudf.Series(close)
 
-    m, b = npPolyfit(X, close, 1)
-    lr = Series(m * X + b, index=src_index)
-    stdev = npStd(close, ddof=ddof)
+    pr = PolyRegression(degree=1)
+    pr.fit(cudf.DataFrame({'X': X}, index=X), cudf.Series(close, index=X))
+    m, b = pr.coef_
+    lr = cudf.Series(m * X + b, index=src_index)
+    stdev = sqrt(((close - lr)**2).mean())
 
     # Name and Categorize it
-    df = DataFrame({f"{_props}_LR": lr}, index=src_index)
+    df = cudf.DataFrame({f"{_props}_LR": lr}, index=src_index)
     for i in stds:
         df[f"{_props}_L_{i}"] = lr - i * stdev
         df[f"{_props}_U_{i}"] = lr + i * stdev
@@ -62,45 +63,4 @@ def tos_stdevall(close, length=None, stds=None, ddof=None, offset=None, **kwargs
     df.category = "statistics"
 
     return df
-
-
-tos_stdevall.__doc__ = \
-"""TD Ameritrade's Think or Swim Standard Deviation All (TOS_STDEV)
-
-A port of TD Ameritrade's Think or Swim Standard Deviation All indicator which
-returns the standard deviation of data for the entire plot or for the interval
-of the last bars defined by the length parameter.
-
-Sources:
-    https://tlc.thinkorswim.com/center/reference/thinkScript/Functions/Statistical/StDevAll
-
-Calculation:
-    Default Inputs:
-        length=None (All), stds=[1, 2, 3], ddof=1
-    LR = Linear Regression
-    STDEV = Standard Deviation
-
-    LR = LR(close, length)
-    STDEV = STDEV(close, length, ddof)
-    for level in stds:
-        LOWER = LR - level * STDEV
-        UPPER = LR + level * STDEV
-
-Args:
-    close (pd.Series): Series of 'close's
-    length (int): Bars from current bar. Default: None
-    stds (list): List of Standard Deviations in increasing order from the
-                 central Linear Regression line. Default: [1,2,3]
-    ddof (int): Delta Degrees of Freedom.
-                The divisor used in calculations is N - ddof,
-                where N represents the number of elements. Default: 1
-    offset (int): How many periods to offset the result. Default: 0
-
-Kwargs:
-    fillna (value, optional): pd.DataFrame.fillna(value)
-    fill_method (value, optional): Type of fill method
-
-Returns:
-    pd.DataFrame: Central LR, Pairs of Lower and Upper LR Lines based on
-        mulitples of the standard deviation. Default: returns 7 columns.
-"""
+```

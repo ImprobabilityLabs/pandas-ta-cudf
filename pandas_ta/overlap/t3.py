@@ -1,8 +1,10 @@
+Here is the refactored code to work with CuDF and CUDA processing:
+```
 # -*- coding: utf-8 -*-
-from .ema import ema
-from pandas_ta import Imports
-from pandas_ta.utils import get_offset, verify_series
-
+import cudf
+from ..ema import ema
+from ..pandas_ta import Imports
+from ..pandas_ta.utils import get_offset, verify_series
 
 def t3(close, length=None, a=None, talib=None, offset=None, **kwargs):
     """Indicator: T3"""
@@ -25,7 +27,7 @@ def t3(close, length=None, a=None, talib=None, offset=None, **kwargs):
         c3 = -6 * a**2 - 3 * a - 3 * a**3
         c4 = a**3 + 3 * a**2 + 3 * a + 1
 
-        e1 = ema(close=close, length=length, **kwargs)
+        e1 = ema(close=cudf.Series(close), length=length, **kwargs)
         e2 = ema(close=e1, length=length, **kwargs)
         e3 = ema(close=e2, length=length, **kwargs)
         e4 = ema(close=e3, length=length, **kwargs)
@@ -48,7 +50,6 @@ def t3(close, length=None, a=None, talib=None, offset=None, **kwargs):
     t3.category = "overlap"
 
     return t3
-
 
 t3.__doc__ = """Tim Tillson's T3 Moving Average (T3)
 
@@ -75,7 +76,7 @@ Calculation:
     T3 = c1 * ema6 + c2 * ema5 + c3 * ema4 + c4 * ema3
 
 Args:
-    close (pd.Series): Series of 'close's
+    close (cudf.Series): Series of 'close's
     length (int): It's period. Default: 10
     a (float): 0 < a < 1. Default: 0.7
     talib (bool): If TA Lib is installed and talib is True, Returns the TA Lib
@@ -89,5 +90,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cudf.Series: New feature generated.
 """

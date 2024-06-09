@@ -1,4 +1,5 @@
-# -*- coding: utf-8 -*-
+from cudf import Series
+import cudf
 from pandas_ta.utils import get_drift, get_offset, is_percent, verify_series
 
 def decreasing(close, length=None, strict=None, asint=None, percent=None, drift=None, offset=None, **kwargs):
@@ -48,7 +49,6 @@ def decreasing(close, length=None, strict=None, asint=None, percent=None, drift=
 
     return decreasing
 
-
 decreasing.__doc__ = \
 """Decreasing
 
@@ -67,7 +67,7 @@ Calculation:
         decreasing = decreasing.astype(int)
 
 Args:
-    close (pd.Series): Series of 'close's
+    close (cudf.Series): Series of 'close's
     length (int): It's period. Default: 1
     strict (bool): If True, checks if the series is continuously decreasing over the period. Default: False
     percent (float): Percent as an integer. Default: None
@@ -80,5 +80,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cudf.Series: New feature generated.
 """

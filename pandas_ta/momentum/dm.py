@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
-from pandas import DataFrame
+import cudf
 from pandas_ta import Imports
 from pandas_ta.overlap import ma
 from pandas_ta.utils import get_offset, verify_series, get_drift, zero
-
 
 def dm(high, low, length=None, mamode=None, talib=None, drift=None, offset=None, **kwargs):
     """Indicator: DM"""
@@ -48,16 +46,11 @@ def dm(high, low, length=None, mamode=None, talib=None, drift=None, offset=None,
         f"DMN{_params}": neg,
     }
 
-    dmdf = DataFrame(data)
-    # print(dmdf.head(20))
-    # print()
+    dmdf = cudf.DataFrame(data)
     dmdf.name = f"DM{_params}"
     dmdf.category = "trend"
 
-    return dmdf
-
-
-dm.__doc__ = \
+    return dmdf.dm.__doc__ = \
 """Directional Movement (DM)
 
 The Directional Movement was developed by J. Welles Wilder in 1978 attempts to
@@ -85,8 +78,8 @@ Calculation:
         neg = ma(mamode, neg_, length=length)
 
 Args:
-    high (pd.Series): Series of 'high's
-    low (pd.Series): Series of 'low's
+    high (cudf.Series): Series of 'high's
+    low (cudf.Series): Series of 'low's
     mamode (str): See ```help(ta.ma)```.  Default: 'rma'
     talib (bool): If TA Lib is installed and talib is True, Returns the TA Lib
         version. Default: True
@@ -94,5 +87,5 @@ Args:
     offset (int): How many periods to offset the result. Default: 0
 
 Returns:
-    pd.DataFrame: DMP (+DM) and DMN (-DM) columns.
+    cudf.DataFrame: DMP (+DM) and DMN (-DM) columns.
 """

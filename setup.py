@@ -28,7 +28,7 @@ setup(
     maintainer="Kevin Johnson",
     maintainer_email="appliedmathkj@gmail.com",
     download_url="https://github.com/twopirllc/pandas-ta.git",
-    keywords=["technical analysis", "trading", "python3", "pandas"],
+    keywords=["technical analysis", "trading", "python3", "pandas", "cudf"],
     license="The MIT License (MIT)",
     classifiers=[
         "Development Status :: 4 - Beta",
@@ -50,10 +50,7 @@ setup(
     package_data={
         "data": ["data/*.csv"],
     },
-    install_requires=["pandas"],
-    # List additional groups of dependencies here (e.g. development dependencies).
-    # You can install these using the following syntax, for example:
-    # $ pip install -e .[dev,test]
+    install_requires=["cudf", "cupy", "numpy", "pandas"],
     extras_require={
         "dev": [
             "alphaVantage-api", "matplotlib", "mplfinance", "scipy",

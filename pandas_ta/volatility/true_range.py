@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from numpy import nan as npNaN
+import cudf
 from pandas import concat
 from pandas_ta import Imports
 from pandas_ta.utils import get_drift, get_offset, non_zero_range, verify_series
@@ -8,9 +8,9 @@ from pandas_ta.utils import get_drift, get_offset, non_zero_range, verify_series
 def true_range(high, low, close, talib=None, drift=None, offset=None, **kwargs):
     """Indicator: True Range"""
     # Validate arguments
-    high = verify_series(high)
-    low = verify_series(low)
-    close = verify_series(close)
+    high = verify_series(high).to_cuda()
+    low = verify_series(low).to_cuda()
+    close = verify_series(close).to_cuda()
     drift = get_drift(drift)
     offset = get_offset(offset)
     mode_tal = bool(talib) if isinstance(talib, bool) else True
@@ -41,7 +41,7 @@ def true_range(high, low, close, talib=None, drift=None, offset=None, **kwargs):
     true_range.name = f"TRUERANGE_{drift}"
     true_range.category = "volatility"
 
-    return true_range
+    return true_range.to_pandas()
 
 
 true_range.__doc__ = \
@@ -61,9 +61,9 @@ Calculation:
     TRUE_RANGE = ABS([high - low, high - prev_close, low - prev_close])
 
 Args:
-    high (pd.Series): Series of 'high's
-    low (pd.Series): Series of 'low's
-    close (pd.Series): Series of 'close's
+    high (pd.Series or cudf.Series): Series of 'high's
+    low (pd.Series or cudf.Series): Series of 'low's
+    close (pd.Series or cudf.Series): Series of 'close's
     talib (bool): If TA Lib is installed and talib is True, Returns the TA Lib
         version. Default: True
     drift (int): The shift period. Default: 1

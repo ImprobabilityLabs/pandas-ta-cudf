@@ -1,21 +1,22 @@
+```
 # -*- coding: utf-8 -*-
+import cudf
 from pandas_ta.overlap import hl2, sma
 from pandas_ta.utils import get_drift, get_offset, non_zero_range, verify_series
-
 
 def eom(high, low, close, volume, length=None, divisor=None, drift=None, offset=None, **kwargs):
     """Indicator: Ease of Movement (EOM)"""
     # Validate arguments
     length = int(length) if length and length > 0 else 14
     divisor = divisor if divisor and divisor > 0 else 100000000
-    high = verify_series(high, length)
-    low = verify_series(low, length)
-    close = verify_series(close, length)
-    volume = verify_series(volume, length)
+    high = cudf.Series(high).astype('float64')
+    low = cudf.Series(low).astype('float64')
+    close = cudf.Series(close).astype('float64')
+    volume = cudf.Series(volume).astype('float64')
     drift = get_drift(drift)
     offset = get_offset(offset)
 
-    if high is None or low is None or close is None or volume is None: return
+    if high.has_nulls or low.has_nulls or close.has_nulls or volume.has_nulls: return
 
     # Calculate Result
     high_low_range = non_zero_range(high, low)
@@ -65,18 +66,18 @@ Calculation:
     EOM = SMA(eom, length)
 
 Args:
-    high (pd.Series): Series of 'high's
-    low (pd.Series): Series of 'low's
-    close (pd.Series): Series of 'close's
-    volume (pd.Series): Series of 'volume's
+    high (cudf.Series): Series of 'high's
+    low (cudf.Series): Series of 'low's
+    close (cudf.Series): Series of 'close's
+    volume (cudf.Series): Series of 'volume's
     length (int): The short period. Default: 14
     drift (int): The diff period. Default: 1
     offset (int): How many periods to offset the result. Default: 0
 
 Kwargs:
-    fillna (value, optional): pd.DataFrame.fillna(value)
+    fillna (value, optional): cudf.DataFrame.fillna(value)
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cudf.Series: New feature generated.
 """

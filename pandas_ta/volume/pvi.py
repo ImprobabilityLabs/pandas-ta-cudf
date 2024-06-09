@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
-from pandas_ta.momentum import roc
-from pandas_ta.utils import get_offset, signed_series, verify_series
-
+import cudf
+from cuml.metrics import roc as cucroc
+from cucim.core.operations import signed_series, verify_series, get_offset
 
 def pvi(close, volume, length=None, initial=None, offset=None, **kwargs):
     """Indicator: Positive Volume Index (PVI)"""
     # Validate arguments
     length = int(length) if length and length > 0 else 1
-    # min_periods = int(kwargs["min_periods"]) if "min_periods" in kwargs and kwargs["min_periods"] is not None else length
     initial = int(initial) if initial and initial > 0 else 1000
     close = verify_series(close, length)
     volume = verify_series(volume, length)
@@ -17,7 +16,7 @@ def pvi(close, volume, length=None, initial=None, offset=None, **kwargs):
 
     # Calculate Result
     signed_volume = signed_series(volume, 1)
-    pvi = roc(close=close, length=length) * signed_volume[signed_volume > 0].abs()
+    pvi = cucroc(close=close, length=length) * signed_volume[signed_volume > 0].abs()
     pvi.fillna(0, inplace=True)
     pvi.iloc[0] = initial
     pvi = pvi.cumsum()
@@ -62,8 +61,8 @@ Calculation:
     pvi = pvi.cumsum()
 
 Args:
-    close (pd.Series): Series of 'close's
-    volume (pd.Series): Series of 'volume's
+    close (cudf.Series): Series of 'close's
+    volume (cudf.Series): Series of 'volume's
     length (int): The short period. Default: 13
     initial (int): The short period. Default: 1000
     offset (int): How many periods to offset the result. Default: 0
@@ -73,5 +72,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cudf.Series: New feature generated.
 """

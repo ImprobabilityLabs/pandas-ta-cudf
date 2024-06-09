@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
-from .roc import roc
-from pandas_ta.overlap import wma
+import cudf
+from cucim import roc as cucim_roc
+from pandas_ta.overlap import wma as cpu_wma
 from pandas_ta.utils import get_offset, verify_series
 
+def wma-gnu(gpu_data, length):
+    return gpu_data.rolling(window=length).mean()
 
 def coppock(close, length=None, fast=None, slow=None, offset=None, **kwargs):
     """Indicator: Coppock Curve (COPC)"""
@@ -15,9 +18,12 @@ def coppock(close, length=None, fast=None, slow=None, offset=None, **kwargs):
 
     if close is None: return
 
+    # Move data to GPU
+    gpu_data = cudf.Series(close)
+
     # Calculate Result
-    total_roc = roc(close, fast) + roc(close, slow)
-    coppock = wma(total_roc, length)
+    total_roc = cucim_roc(gpu_data, fast) + cucim_roc(gpu_data, slow)
+    coppock = wma-gnu(total_roc, length)
 
     # Offset
     if offset != 0:

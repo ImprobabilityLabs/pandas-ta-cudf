@@ -1,19 +1,23 @@
+Here is the refactored code to work with CuDF:
+
+```python
 # -*- coding: utf-8 -*-
+import cudf
 from pandas_ta.utils import get_offset, signed_series, verify_series
 
 
 def pvol(close, volume, offset=None, **kwargs):
     """Indicator: Price-Volume (PVOL)"""
     # Validate arguments
-    close = verify_series(close)
-    volume = verify_series(volume)
+    close = verify_series(close, func=cudf.Series)
+    volume = verify_series(volume, func=cudf.Series)
     offset = get_offset(offset)
     signed = kwargs.pop("signed", False)
 
     # Calculate Result
     pvol = close * volume
     if signed:
-         pvol *= signed_series(close, 1)
+         pvol *= signed_series(close, 1, func=cudf.Series)
 
     # Offset
     if offset != 0:
@@ -44,8 +48,8 @@ Calculation:
         pvol = close * volume
 
 Args:
-    close (pd.Series): Series of 'close's
-    volume (pd.Series): Series of 'volume's
+    close (cudf.Series): Series of 'close's
+    volume (cudf.Series): Series of 'volume's
     signed (bool): Keeps the sign of the difference in 'close's. Default: True
     offset (int): How many periods to offset the result. Default: 0
 
@@ -54,5 +58,6 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cudf.Series: New feature generated.
 """
+```

@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import cudf
 from pandas_ta.utils import get_offset, verify_series, weights
 
 
@@ -13,8 +14,10 @@ def cg(close, length=None, offset=None, **kwargs):
 
     # Calculate Result
     coefficients = [length - i for i in range(0, length)]
-    numerator = -close.rolling(length).apply(weights(coefficients), raw=True)
-    cg = numerator / close.rolling(length).sum()
+    close_gdf = cudf.DataFrame({'close': close})
+    numerator = close_gdf.rolling(window=length).apply(weights(coefficients), raw=True)
+    cg_gdf = numerator / close_gdf.rolling(window=length).sum()
+    cg = cg_gdf['close']
 
     # Offset
     if offset != 0:

@@ -1,8 +1,12 @@
+Here is the refactored code to work with CuDF:
+
+```python
 # -*- coding: utf-8 -*-
-from numpy import sqrt as npSqrt
+import cucim
+import cupy
+from cucim.core.operations import sqrt as cpSqrt
 from .wma import wma
 from pandas_ta.utils import get_offset, verify_series
-
 
 def hma(close, length=None, offset=None, **kwargs):
     """Indicator: Hull Moving Average (HMA)"""
@@ -15,7 +19,7 @@ def hma(close, length=None, offset=None, **kwargs):
 
     # Calculate Result
     half_length = int(length / 2)
-    sqrt_length = int(npSqrt(length))
+    sqrt_length = int(cpSqrt(length))
 
     wmaf = wma(close=close, length=half_length)
     wmas = wma(close=close, length=length)
@@ -59,7 +63,7 @@ Calculation:
     HMA = WMA(2 * wmaf - wmas, sqrt_length)
 
 Args:
-    close (pd.Series): Series of 'close's
+    close (cudf.Series): Series of 'close's
     length (int): It's period. Default: 10
     offset (int): How many periods to offset the result. Default: 0
 
@@ -68,5 +72,6 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cudf.Series: New feature generated.
 """
+```

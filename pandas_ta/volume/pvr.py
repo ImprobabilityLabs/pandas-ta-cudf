@@ -1,29 +1,42 @@
 # -*- coding: utf-8 -*-
-from pandas_ta.utils import verify_series
-from numpy import nan as npNaN
-from pandas import Series
+import cudf
+from numba import cuda
 
+@cuda.jit
+def pvr_kernel(close, volume, pvr):
+    idx = cuda.grid(1)
+    if idx < close.size:
+        close_diff = close[idx] - close[idx - 1] if idx > 0 else 0
+        volume_diff = volume[idx] - volume[idx - 1] if idx > 0 else 0
+        if close_diff >= 0 and volume_diff >= 0:
+            pvr[idx] = 1
+        elif close_diff >= 0 and volume_diff < 0:
+            pvr[idx] = 2
+        elif close_diff < 0 and volume_diff >= 0:
+            pvr[idx] = 3
+        else:
+            pvr[idx] = 4
 
 def pvr(close, volume):
     """ Indicator: Price Volume Rank"""
     # Validate arguments
-    close = verify_series(close)
-    volume = verify_series(volume)
+    close = cudf.Series(close)
+    volume = cudf.Series(volume)
 
     # Calculate Result
-    close_diff = close.diff().fillna(0)
-    volume_diff = volume.diff().fillna(0)
-    pvr_ = Series(npNaN, index=close.index)
-    pvr_.loc[(close_diff >= 0) & (volume_diff >= 0)] = 1
-    pvr_.loc[(close_diff >= 0) & (volume_diff < 0)]  = 2
-    pvr_.loc[(close_diff < 0) & (volume_diff >= 0)]  = 3
-    pvr_.loc[(close_diff < 0) & (volume_diff < 0)]   = 4
+    pvr_ser = cudf.Series(index=close.index)
+    pvr_ary = cuda.to_device(pvr_ser.values)
+
+    blockdim = 256
+    griddim = (len(close) + blockdim - 1) // blockdim
+    pvr_kernel[griddim, blockdim](close.values, volume.values, pvr_ary)
+    pvr_ser.values = pvr_ary.copy_to_host()
 
     # Name and Categorize it
-    pvr_.name = f"PVR"
-    pvr_.category = "volume"
+    pvr_ser.name = "PVR"
+    pvr_ser.category = "volume"
 
-    return pvr_
+    return pvr_ser
 
 
 pvr.__doc__ = \
@@ -45,9 +58,9 @@ Calculation:
     return 4 if 'close change' < 0 and 'volume change' < 0
 
 Args:
-    close (pd.Series): Series of 'close's
-    volume (pd.Series): Series of 'volume's
+    close (cudf.Series): Series of 'close's
+    volume (cudf.Series): Series of 'volume's
 
 Returns:
-    pd.Series: New feature generated.
+    cudf.Series: New feature generated.
 """

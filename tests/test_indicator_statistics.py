@@ -1,17 +1,17 @@
 from .config import error_analysis, sample_data, CORRELATION, CORRELATION_THRESHOLD, VERBOSE
-from .context import pandas_ta
+from .context import cudf_ta
 
 from unittest import skip, TestCase
+import cudf
+import cupy
 import pandas.testing as pdt
-from pandas import DataFrame, Series
-
+from cudf import DataFrame, Series
 import talib as tal
-
 
 class TestStatistics(TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.data = sample_data
+        cls.data = cudf.from_pandas(sample_data)
         cls.data.columns = cls.data.columns.str.lower()
         cls.open = cls.data["open"]
         cls.high = cls.data["high"]
@@ -35,90 +35,90 @@ class TestStatistics(TestCase):
 
 
     def test_entropy(self):
-        result = pandas_ta.entropy(self.close)
+        result = cudf_ta.entropy(self.close)
         self.assertIsInstance(result, Series)
         self.assertEqual(result.name, "ENTP_10")
 
     def test_kurtosis(self):
-        result = pandas_ta.kurtosis(self.close)
+        result = cudf_ta.kurtosis(self.close)
         self.assertIsInstance(result, Series)
         self.assertEqual(result.name, "KURT_30")
 
     def test_mad(self):
-        result = pandas_ta.mad(self.close)
+        result = cudf_ta.mad(self.close)
         self.assertIsInstance(result, Series)
         self.assertEqual(result.name, "MAD_30")
 
     def test_median(self):
-        result = pandas_ta.median(self.close)
+        result = cudf_ta.median(self.close)
         self.assertIsInstance(result, Series)
         self.assertEqual(result.name, "MEDIAN_30")
 
     def test_quantile(self):
-        result = pandas_ta.quantile(self.close)
+        result = cudf_ta.quantile(self.close)
         self.assertIsInstance(result, Series)
         self.assertEqual(result.name, "QTL_30_0.5")
 
     def test_skew(self):
-        result = pandas_ta.skew(self.close)
+        result = cudf_ta.skew(self.close)
         self.assertIsInstance(result, Series)
         self.assertEqual(result.name, "SKEW_30")
 
     def test_stdev(self):
-        result = pandas_ta.stdev(self.close, talib=False)
+        result = cudf_ta.stdev(self.close, talib=False)
         self.assertIsInstance(result, Series)
         self.assertEqual(result.name, "STDEV_30")
 
         try:
-            expected = tal.STDDEV(self.close, 30)
-            pdt.assert_series_equal(result, expected, check_names=False)
+            expected = tal.STDDEV(cupy.asarray(self.close), 30)
+            pdt.assert_series_equal(result, cudf.Series(expected), check_names=False)
         except AssertionError:
             try:
-                corr = pandas_ta.utils.df_error_analysis(result, expected, col=CORRELATION)
+                corr = cudf_ta.utils.df_error_analysis(result, cudf.Series(expected), col=CORRELATION)
                 self.assertGreater(corr, CORRELATION_THRESHOLD)
             except Exception as ex:
                 error_analysis(result, CORRELATION, ex)
 
-        result = pandas_ta.stdev(self.close)
+        result = cudf_ta.stdev(self.close)
         self.assertIsInstance(result, Series)
         self.assertEqual(result.name, "STDEV_30")
 
     def test_tos_sdtevall(self):
-        result = pandas_ta.tos_stdevall(self.close)
+        result = cudf_ta.tos_stdevall(self.close)
         self.assertIsInstance(result, DataFrame)
         self.assertEqual(result.name, "TOS_STDEVALL")
         self.assertEqual(len(result.columns), 7)
 
-        result = pandas_ta.tos_stdevall(self.close, length=30)
+        result = cudf_ta.tos_stdevall(self.close, length=30)
         self.assertIsInstance(result, DataFrame)
         self.assertEqual(result.name, "TOS_STDEVALL_30")
         self.assertEqual(len(result.columns), 7)
 
-        result = pandas_ta.tos_stdevall(self.close, length=30, stds=[1, 2])
+        result = cudf_ta.tos_stdevall(self.close, length=30, stds=[1, 2])
         self.assertIsInstance(result, DataFrame)
         self.assertEqual(result.name, "TOS_STDEVALL_30")
         self.assertEqual(len(result.columns), 5)
 
     def test_variance(self):
-        result = pandas_ta.variance(self.close, talib=False)
+        result = cudf_ta.variance(self.close, talib=False)
         self.assertIsInstance(result, Series)
         self.assertEqual(result.name, "VAR_30")
 
         try:
-            expected = tal.VAR(self.close, 30)
-            pdt.assert_series_equal(result, expected, check_names=False)
+            expected = tal.VAR(cupy.asarray(self.close), 30)
+            pdt.assert_series_equal(result, cudf.Series(expected), check_names=False)
         except AssertionError:
             try:
-                corr = pandas_ta.utils.df_error_analysis(result, expected, col=CORRELATION)
+                corr = cudf_ta.utils.df_error_analysis(result, cudf.Series(expected), col=CORRELATION)
                 self.assertGreater(corr, CORRELATION_THRESHOLD)
             except Exception as ex:
                 error_analysis(result, CORRELATION, ex)
 
-        result = pandas_ta.variance(self.close)
+        result = cudf_ta.variance(self.close)
         self.assertIsInstance(result, Series)
         self.assertEqual(result.name, "VAR_30")
 
     def test_zscore(self):
-        result = pandas_ta.zscore(self.close)
+        result = cudf_ta.zscore(self.close)
         self.assertIsInstance(result, Series)
         self.assertEqual(result.name, "ZS_30")

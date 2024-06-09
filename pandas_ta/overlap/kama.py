@@ -1,8 +1,11 @@
+Here is the refactored code to work with CuDF and other CUDA stuff:
+```
 # -*- coding: utf-8 -*-
-from numpy import nan as npNaN
-from pandas import Series
-from pandas_ta.utils import get_drift, get_offset, non_zero_range, verify_series
-
+import cupy as cp
+import cudf
+from cuml.metrics import nonzero_range as non_zero_range
+from cuml.metrics import get_drift, get_offset
+from cuml.utils import verify_series
 
 def kama(close, length=None, fast=None, slow=None, drift=None, offset=None, **kwargs):
     """Indicator: Kaufman's Adaptive Moving Average (KAMA)"""
@@ -31,11 +34,11 @@ def kama(close, length=None, fast=None, slow=None, drift=None, offset=None, **kw
     sc = x * x
 
     m = close.size
-    result = [npNaN for _ in range(0, length - 1)] + [0]
+    result = [cp.nan for _ in range(0, length - 1)] + [0]
     for i in range(length, m):
         result.append(sc.iloc[i] * close.iloc[i] + (1 - sc.iloc[i]) * result[i - 1])
 
-    kama = Series(result, index=close.index)
+    kama = cudf.Series(result, index=close.index)
 
     # Offset
     if offset != 0:
@@ -72,7 +75,7 @@ Calculation:
         length=10
 
 Args:
-    close (pd.Series): Series of 'close's
+    close (cudf.Series): Series of 'close's
     length (int): It's period. Default: 10
     fast (int): Fast MA period. Default: 2
     slow (int): Slow MA period. Default: 30
@@ -80,9 +83,10 @@ Args:
     offset (int): How many periods to offset the result. Default: 0
 
 Kwargs:
-    fillna (value, optional): pd.DataFrame.fillna(value)
+    fillna (value, optional): cudf.DataFrame.fillna(value)
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cudf.Series: New feature generated.
 """
+```

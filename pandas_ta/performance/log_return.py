@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
-from numpy import log as nplog
+import cudf
+import cupy as cp
+from cudf.utils import cudautils
 from pandas_ta.utils import get_offset, verify_series
-
 
 def log_return(close, length=None, cumulative=None, offset=None, **kwargs):
     """Indicator: Log Return"""
@@ -15,10 +16,9 @@ def log_return(close, length=None, cumulative=None, offset=None, **kwargs):
 
     # Calculate Result
     if cumulative:
-        # log_return = nplog(close).diff(length).cumsum()
-        log_return = nplog(close / close.iloc[0])
+        log_return = cp.log(close / close.iloc[0])
     else:
-        log_return = nplog(close / close.shift(length)) # nplog(close).diff(length)
+        log_return = cp.log(close / close.shift(length))
 
     # Offset
     if offset != 0:
@@ -53,7 +53,7 @@ Calculation:
     CUMLOGRET = LOGRET.cumsum() if cumulative
 
 Args:
-    close (pd.Series): Series of 'close's
+    close (cudf.Series): Series of 'close's
     length (int): It's period. Default: 20
     cumulative (bool): If True, returns the cumulative returns. Default: False
     offset (int): How many periods to offset the result. Default: 0
@@ -63,5 +63,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cudf.Series: New feature generated.
 """

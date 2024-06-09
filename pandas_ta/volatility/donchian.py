@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
-from pandas import DataFrame
+import cudf
 from pandas_ta.utils import get_offset, verify_series
-
 
 def donchian(high, low, lower_length=None, upper_length=None, offset=None, **kwargs):
     """Indicator: Donchian Channels (DC)"""
@@ -18,8 +17,8 @@ def donchian(high, low, lower_length=None, upper_length=None, offset=None, **kwa
     if high is None or low is None: return
 
     # Calculate Result
-    lower = low.rolling(lower_length, min_periods=lower_min_periods).min()
-    upper = high.rolling(upper_length, min_periods=upper_min_periods).max()
+    lower = low.rolling(window=lower_length, min_periods=lower_min_periods).min()
+    upper = high.rolling(window=upper_length, min_periods=upper_min_periods).max()
     mid = 0.5 * (lower + upper)
 
     # Handle fills
@@ -46,7 +45,7 @@ def donchian(high, low, lower_length=None, upper_length=None, offset=None, **kwa
 
     # Prepare DataFrame to return
     data = {lower.name: lower, mid.name: mid, upper.name: upper}
-    dcdf = DataFrame(data)
+    dcdf = cudf.DataFrame(data)
     dcdf.name = f"DC_{lower_length}_{upper_length}"
     dcdf.category = mid.category
 

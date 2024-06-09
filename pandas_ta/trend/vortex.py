@@ -1,5 +1,6 @@
+```python
 # -*- coding: utf-8 -*-
-from pandas import DataFrame
+import cudf
 from pandas_ta.volatility import true_range
 from pandas_ta.utils import get_drift, get_offset, verify_series
 
@@ -20,13 +21,13 @@ def vortex(high, low, close, length=None, drift=None, offset=None, **kwargs):
 
     # Calculate Result
     tr = true_range(high=high, low=low, close=close)
-    tr_sum = tr.rolling(length, min_periods=min_periods).sum()
+    tr_sum = tr.rolling(window=length, min_periods=min_periods).sum()
 
     vmp = (high - low.shift(drift)).abs()
     vmm = (low - high.shift(drift)).abs()
 
-    vip = vmp.rolling(length, min_periods=min_periods).sum() / tr_sum
-    vim = vmm.rolling(length, min_periods=min_periods).sum() / tr_sum
+    vip = vmp.rolling(window=length, min_periods=min_periods).sum() / tr_sum
+    vim = vmm.rolling(window=length, min_periods=min_periods).sum() / tr_sum
 
     # Offset
     if offset != 0:
@@ -44,13 +45,13 @@ def vortex(high, low, close, length=None, drift=None, offset=None, **kwargs):
     # Name and Categorize it
     vip.name = f"VTXP_{length}"
     vim.name = f"VTXM_{length}"
-    vip.category = vim.category = "trend"
+    vip.attrs["category"] = vim.attrs["category"] = "trend"
 
     # Prepare DataFrame to return
     data = {vip.name: vip, vim.name: vim}
-    vtxdf = DataFrame(data)
+    vtxdf = cudf.DataFrame(data)
     vtxdf.name = f"VTX_{length}"
-    vtxdf.category = "trend"
+    vtxdf.attrs["category"] = "trend"
 
     return vtxdf
 
@@ -78,9 +79,9 @@ Calculation:
     VIM = vmn.rolling(length).sum() / tr_sum
 
 Args:
-    high (pd.Series): Series of 'high's
-    low (pd.Series): Series of 'low's
-    close (pd.Series): Series of 'close's
+    high (cuDF.Series): Series of 'high's
+    low (cuDF.Series): Series of 'low's
+    close (cuDF.Series): Series of 'close's
     length (int): ROC 1 period. Default: 14
     drift (int): The difference period. Default: 1
     offset (int): How many periods to offset the result. Default: 0
@@ -90,5 +91,6 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.DataFrame: vip and vim columns
+    cuDF.DataFrame: vip and vim columns
 """
+```

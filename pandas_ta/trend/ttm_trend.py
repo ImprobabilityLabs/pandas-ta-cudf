@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
-from pandas import DataFrame
+from cudf import DataFrame as CUDF
 from pandas_ta.overlap import hl2
 from pandas_ta.utils import get_offset, verify_series
-
 
 def ttm_trend(high, low, close, length=None, offset=None, **kwargs):
     """Indicator: TTM Trend (TTM_TRND)"""
@@ -41,7 +39,7 @@ def ttm_trend(high, low, close, length=None, offset=None, **kwargs):
 
     # Prepare DataFrame to return
     data = {tm_trend.name: tm_trend}
-    df = DataFrame(data)
+    df = CUDF(data)
     df.name = f"TTMTREND_{length}"
     df.category = tm_trend.category
 
@@ -71,14 +69,14 @@ Calculation:
         drawcandle(open,high,low,close) coloured(255,0,0)
 
 Args:
-    high (pd.Series): Series of 'high's
-    low (pd.Series): Series of 'low's
-    close (pd.Series): Series of 'close's
+    high (cuDF.Series): Series of 'high's
+    low (cuDF.Series): Series of 'low's
+    close (cuDF.Series): Series of 'close's
     length (int): It's period. Default: 6
     offset (int): How many periods to offset the result. Default: 0
 Kwargs:
     fillna (value, optional): pd.DataFrame.fillna(value)
     fill_method (value, optional): Type of fill method
 Returns:
-    pd.DataFrame: ttm_trend.
+    cuDF.DataFrame: ttm_trend.
 """

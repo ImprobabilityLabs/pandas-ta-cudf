@@ -1,8 +1,9 @@
+```
 # -*- coding: utf-8 -*-
 from .sma import sma
+import cudf
 from pandas_ta import Imports
 from pandas_ta.utils import get_offset, verify_series
-
 
 def trima(close, length=None, talib=None, offset=None, **kwargs):
     """Indicator: Triangular Moving Average (TRIMA)"""
@@ -17,7 +18,8 @@ def trima(close, length=None, talib=None, offset=None, **kwargs):
     # Calculate Result
     if Imports["talib"] and mode_tal:
         from talib import TRIMA
-        trima = TRIMA(close, length)
+        trima = TRIMA(close.to_pandas(), length)
+        trima = cudf.Series(trima, index=close.index)
     else:
         half_length = round(0.5 * (length + 1))
         sma1 = sma(close, length=half_length)
@@ -60,7 +62,7 @@ Calculation:
     TRIMA = SMA(SMA1, half_length)
 
 Args:
-    close (pd.Series): Series of 'close's
+    close (cuDF.Series): Series of 'close's
     length (int): It's period. Default: 10
     talib (bool): If TA Lib is installed and talib is True, Returns the TA Lib
         version. Default: True
@@ -72,5 +74,6 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cuDF.Series: New feature generated.
 """
+```

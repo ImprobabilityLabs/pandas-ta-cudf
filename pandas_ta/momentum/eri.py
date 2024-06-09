@@ -1,22 +1,25 @@
 # -*- coding: utf-8 -*-
-from pandas import DataFrame
-from pandas_ta.overlap import ema
-from pandas_ta.utils import get_offset, verify_series
+import cudf
+from cudf.core.window import rolling
+from cudf.utils.dtypes import CUDA_DEVICE
 
+@cudf.udfudge(overwrite=True)
+def ema_udf(x, n):
+    return rolling.ewm(x, n).mean()
 
 def eri(high, low, close, length=None, offset=None, **kwargs):
     """Indicator: Elder Ray Index (ERI)"""
     # Validate arguments
     length = int(length) if length and length > 0 else 13
-    high = verify_series(high, length)
-    low = verify_series(low, length)
-    close = verify_series(close, length)
+    high = cudf.Series(high)
+    low = cudf.Series(low)
+    close = cudf.Series(close)
     offset = get_offset(offset)
 
     if high is None or low is None or close is None: return
 
     # Calculate Result
-    ema_ = ema(close, length)
+    ema_ = ema_udf(close, length)
     bull = high - ema_
     bear = low - ema_
 
@@ -40,7 +43,7 @@ def eri(high, low, close, length=None, offset=None, **kwargs):
 
     # Prepare DataFrame to return
     data = {bull.name: bull, bear.name: bear}
-    df = DataFrame(data)
+    df = cudf.DataFrame(data)
     df.name = f"ERI_{length}"
     df.category = bull.category
 
@@ -72,9 +75,9 @@ Calculation:
     BEARPOWER = low - EMA(close, length)
 
 Args:
-    high (pd.Series): Series of 'high's
-    low (pd.Series): Series of 'low's
-    close (pd.Series): Series of 'close's
+    high (cudf.Series): Series of 'high's
+    low (cudf.Series): Series of 'low's
+    close (cudf.Series): Series of 'close's
     length (int): It's period. Default: 14
     offset (int): How many periods to offset the result. Default: 0
 
@@ -83,5 +86,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.DataFrame: bull power and bear power columns.
+    cudf.DataFrame: bull power and bear power columns.
 """

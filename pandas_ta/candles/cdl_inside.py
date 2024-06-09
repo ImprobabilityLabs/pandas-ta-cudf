@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
+import cudf
 from pandas_ta.utils import candle_color, get_offset
 from pandas_ta.utils import verify_series
-
 
 def cdl_inside(open_, high, low, close, asbool=False, offset=None, **kwargs):
     """Candle Type: Inside Bar"""
     # Validate arguments
-    open_ = verify_series(open_)
-    high = verify_series(high)
-    low = verify_series(low)
-    close = verify_series(close)
+    open_ = cudf.Series(verify_series(open_))
+    high = cudf.Series(verify_series(high))
+    low = cudf.Series(verify_series(low))
+    close = cudf.Series(verify_series(close))
     offset = get_offset(offset)
 
     # Calculate Result
@@ -56,10 +56,10 @@ Calculation:
         inside *= candle_color(open_, close)
 
 Args:
-    open_ (pd.Series): Series of 'open's
-    high (pd.Series): Series of 'high's
-    low (pd.Series): Series of 'low's
-    close (pd.Series): Series of 'close's
+    open_ (cudf.Series): Series of 'open's
+    high (cudf.Series): Series of 'high's
+    low (cudf.Series): Series of 'low's
+    close (cudf.Series): Series of 'close's
     asbool (bool): Returns the boolean result. Default: False
     offset (int): How many periods to offset the result. Default: 0
 
@@ -68,5 +68,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature
+    cudf.Series: New feature
 """

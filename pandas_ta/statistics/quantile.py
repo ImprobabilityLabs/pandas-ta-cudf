@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
+import cudf
 from pandas_ta.utils import get_offset, verify_series
-
 
 def quantile(close, length=None, q=None, offset=None, **kwargs):
     """Indicator: Quantile"""
@@ -13,8 +13,12 @@ def quantile(close, length=None, q=None, offset=None, **kwargs):
 
     if close is None: return
 
+    # Ensure the input is a CuDF Series
+    if not isinstance(close, cudf.Series):
+        close = cudf.Series(close)
+
     # Calculate Result
-    quantile = close.rolling(length, min_periods=min_periods).quantile(q)
+    quantile = close.rolling(window=length, min_periods=min_periods).quantile(q)
 
     # Offset
     if offset != 0:
@@ -44,7 +48,7 @@ Calculation:
     QUANTILE = close.rolling(length).quantile(q)
 
 Args:
-    close (pd.Series): Series of 'close's
+    close (cudf.Series): Series of 'close's
     length (int): It's period. Default: 30
     q (float): The quantile. Default: 0.5
     offset (int): How many periods to offset the result. Default: 0
@@ -54,5 +58,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cudf.Series: New feature generated.
 """

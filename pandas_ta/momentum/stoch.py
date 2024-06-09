@@ -1,5 +1,6 @@
-# -*- coding: utf-8 -*-
-from pandas import DataFrame
+```
+import cudf
+from cucim import cuda
 from pandas_ta.overlap import ma
 from pandas_ta.utils import get_offset, non_zero_range, verify_series
 
@@ -26,8 +27,8 @@ def stoch(high, low, close, k=None, d=None, smooth_k=None, mamode=None, offset=N
     stoch = 100 * (close - lowest_low)
     stoch /= non_zero_range(highest_high, lowest_low)
 
-    stoch_k = ma(mamode, stoch.loc[stoch.first_valid_index():,], length=smooth_k)
-    stoch_d = ma(mamode, stoch_k.loc[stoch_k.first_valid_index():,], length=d)
+    stoch_k = ma(mamode, stoch, length=smooth_k)
+    stoch_d = ma(mamode, stoch_k, length=d)
 
     # Offset
     if offset != 0:
@@ -51,7 +52,7 @@ def stoch(high, low, close, k=None, d=None, smooth_k=None, mamode=None, offset=N
 
     # Prepare DataFrame to return
     data = {stoch_k.name: stoch_k, stoch_d.name: stoch_d}
-    df = DataFrame(data)
+    df = cudf.DataFrame(data)
     df.name = f"{_name}{_props}"
     df.category = stoch_k.category
     return df

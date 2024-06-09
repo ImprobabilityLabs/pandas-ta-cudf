@@ -1,8 +1,10 @@
+Here is the refactored code to work with CuDF and other CUDA-related functionality:
+
+```python
 # -*- coding: utf-8 -*-
-from pandas import DataFrame
+import cudf
 from pandas_ta.volatility import atr
 from pandas_ta.utils import get_offset, verify_series
-
 
 def cksp(high, low, close, p=None, x=None, q=None, tvmode=None, offset=None, **kwargs):
     """Indicator: Chande Kroll Stop (CKSP)"""
@@ -51,7 +53,7 @@ def cksp(high, low, close, p=None, x=None, q=None, tvmode=None, offset=None, **k
     long_stop.category = short_stop.category = "trend"
 
     # Prepare DataFrame to return
-    ckspdf = DataFrame({long_stop.name: long_stop, short_stop.name: short_stop})
+    ckspdf = cudf.DataFrame({long_stop.name: long_stop, short_stop.name: short_stop})
     ckspdf.name = f"CKSP{_props}"
     ckspdf.category = long_stop.category
 
@@ -86,7 +88,7 @@ Calculation:
     SS = SS0.rolling(q).min()
 
 Args:
-    close (pd.Series): Series of 'close's
+    close (cudf.Series): Series of 'close's
     p (int): ATR and first stop period. Default: 10 in both modes
     x (float): ATR scalar. Default: 1 in TV mode, 3 otherwise
     q (int): Second stop period. Default: 9 in TV mode, 20 otherwise
@@ -98,5 +100,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.DataFrame: long and short columns.
+    cudf.DataFrame: long and short columns.
 """

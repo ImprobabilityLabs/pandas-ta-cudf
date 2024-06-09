@@ -1,14 +1,15 @@
-# -*- coding: utf-8 -*-
-from numpy import fabs as npfabs
-from pandas_ta.utils import get_offset, verify_series
-
+import cudf
+from cuml.utils import get_cuml_array
+import cupy as cp
+import numpy as np
+from cuml.metrics import mean_absolute_error
 
 def mad(close, length=None, offset=None, **kwargs):
     """Indicator: Mean Absolute Deviation"""
     # Validate Arguments
     length = int(length) if length and length > 0 else 30
     min_periods = int(kwargs["min_periods"]) if "min_periods" in kwargs and kwargs["min_periods"] is not None else length
-    close = verify_series(close, max(length, min_periods))
+    close = cudf.Series(get_cuml_array(close, dtype=cp.float64), index=cudf.RangeIndex(len(close)))
     offset = get_offset(offset)
 
     if close is None: return
@@ -16,9 +17,10 @@ def mad(close, length=None, offset=None, **kwargs):
     # Calculate Result
     def mad_(series):
         """Mean Absolute Deviation"""
-        return npfabs(series - series.mean()).mean()
+        mean = cp.mean(series)
+        return mean_absolute_error(series, mean)
 
-    mad = close.rolling(length, min_periods=min_periods).apply(mad_, raw=True)
+    mad = close.rolling(window=length, min_periods=min_periods).apply(mad_)
 
     # Offset
     if offset != 0:
@@ -36,7 +38,6 @@ def mad(close, length=None, offset=None, **kwargs):
 
     return mad
 
-
 mad.__doc__ = \
 """Rolling Mean Absolute Deviation
 
@@ -48,7 +49,7 @@ Calculation:
     mad = close.rolling(length).mad()
 
 Args:
-    close (pd.Series): Series of 'close's
+    close (cudf.Series): Series of 'close's
     length (int): It's period. Default: 30
     offset (int): How many periods to offset the result. Default: 0
 
@@ -57,5 +58,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cudf.Series: New feature generated.
 """

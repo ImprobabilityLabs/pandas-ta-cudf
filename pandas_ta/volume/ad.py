@@ -1,25 +1,25 @@
 # -*- coding: utf-8 -*-
+import cudf
 from pandas_ta import Imports
 from pandas_ta.utils import get_offset, non_zero_range, verify_series
-
 
 def ad(high, low, close, volume, open_=None, talib=None, offset=None, **kwargs):
     """Indicator: Accumulation/Distribution (AD)"""
     # Validate Arguments
-    high = verify_series(high)
-    low = verify_series(low)
-    close = verify_series(close)
-    volume = verify_series(volume)
+    high = verify_series(high, use_cudf=True)
+    low = verify_series(low, use_cudf=True)
+    close = verify_series(close, use_cudf=True)
+    volume = verify_series(volume, use_cudf=True)
     offset = get_offset(offset)
     mode_tal = bool(talib) if isinstance(talib, bool) else True
 
     # Calculate Result
     if Imports["talib"] and mode_tal:
         from talib import AD
-        ad = AD(high, low, close, volume)
+        ad = cudf.Series(AD(high, low, close, volume))
     else:
         if open_ is not None:
-            open_ = verify_series(open_)
+            open_ = verify_series(open_, use_cudf=True)
             ad = non_zero_range(close, open_)  # AD with Open
         else:
             ad = 2 * close - (high + low)  # AD with High, Low, Close
@@ -66,11 +66,11 @@ Calculation:
     AD = CUM(AD)
 
 Args:
-    high (pd.Series): Series of 'high's
-    low (pd.Series): Series of 'low's
-    close (pd.Series): Series of 'close's
-    volume (pd.Series): Series of 'volume's
-    open (pd.Series): Series of 'open's
+    high (cudf.Series): Series of 'high's
+    low (cudf.Series): Series of 'low's
+    close (cudf.Series): Series of 'close's
+    volume (cudf.Series): Series of 'volume's
+    open (cudf.Series): Series of 'open's
     talib (bool): If TA Lib is installed and talib is True, Returns the TA Lib
         version. Default: True
     offset (int): How many periods to offset the result. Default: 0
@@ -80,5 +80,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cudf.Series: New feature generated.
 """

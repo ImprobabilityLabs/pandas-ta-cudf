@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
+import cudf
 from pandas_ta import Imports
 from pandas_ta.utils import get_offset, non_zero_range, verify_series
-
 
 def bop(open_, high, low, close, scalar=None, talib=None, offset=None, **kwargs):
     """Indicator: Balance of Power (BOP)"""
     # Validate Arguments
-    open_ = verify_series(open_)
-    high = verify_series(high)
-    low = verify_series(low)
-    close = verify_series(close)
+    open_ = cudf.Series(verify_series(open_))
+    high = cudf.Series(verify_series(high))
+    low = cudf.Series(verify_series(low))
+    close = cudf.Series(verify_series(close))
     scalar = float(scalar) if scalar else 1
     offset = get_offset(offset)
     mode_tal = bool(talib) if isinstance(talib, bool) else True
@@ -17,7 +17,7 @@ def bop(open_, high, low, close, scalar=None, talib=None, offset=None, **kwargs)
     # Calculate Result
     if Imports["talib"] and mode_tal:
         from talib import BOP
-        bop = BOP(open_, high, low, close)
+        bop = cudf.Series(BOP(open_, high, low, close))
     else:
         high_low_range = non_zero_range(high, low)
         close_open_range = non_zero_range(close, open_)
@@ -52,10 +52,10 @@ Calculation:
     BOP = scalar * (close - open) / (high - low)
 
 Args:
-    open (pd.Series): Series of 'open's
-    high (pd.Series): Series of 'high's
-    low (pd.Series): Series of 'low's
-    close (pd.Series): Series of 'close's
+    open (cudf.Series): Series of 'open's
+    high (cudf.Series): Series of 'high's
+    low (cudf.Series): Series of 'low's
+    close (cudf.Series): Series of 'close's
     scalar (float): How much to magnify. Default: 1
     talib (bool): If TA Lib is installed and talib is True, Returns the TA Lib
         version. Default: True
@@ -66,5 +66,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cudf.Series: New feature generated.
 """

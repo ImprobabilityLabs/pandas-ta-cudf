@@ -1,5 +1,5 @@
 from .config import sample_data
-from .context import cucu.ta
+from .context import pandas_ta
 
 from unittest import TestCase, skip
 import cudf

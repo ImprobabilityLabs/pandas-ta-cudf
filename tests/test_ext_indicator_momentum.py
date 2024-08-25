@@ -1,4 +1,3 @@
-```python
 from .config import sample_data
 from .context import cudf_ta as ta
 
@@ -259,4 +258,3 @@ class TestMomentumExtension(TestCase):
         self.data.ta.willr(append=True)
         self.assertIsInstance(self.data, DataFrame)
         self.assertEqual(self.data.columns[-1], "WILLR_14")
-```

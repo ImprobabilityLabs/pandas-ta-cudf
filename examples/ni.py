@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import cudf
-from pandas_ta.overlap import sma as pd_sma
-from pandas_ta.utils import get_offset, verify_series as pd_verify_series
+from cudf_ta.overlap import sma as pd_sma
+from cudf_ta.utils import get_offset, verify_series as pd_verify_series
 
 # - Standard definition of your custom indicator function (including docs) -
 

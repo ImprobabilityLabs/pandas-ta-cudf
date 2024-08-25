@@ -1,4 +1,3 @@
-```python
 # -*- coding: utf-8 -*-
 import datetime as dt
 
@@ -18,7 +17,7 @@ from numpy import append as npAppend
 from numpy import array as npArray
 
 import alphaVantageAPI as AV
-import pandas_ta as ta
+import cudf_ta as ta
 
 
 def colors(colors: str = None, default: str = "GrRd"):
@@ -134,7 +133,7 @@ class Watchlist(object):
                     df = df.set_index(pd.to_datetime(df[index], unit='ns'))
             if self.ds_name == "yahoo":
                 yf_data = self.ds.Ticker(ticker)
-                df = pd.DataFrame(yf_data.history(period="max"))
+                df = cudf.DataFrame(yf_data.history(period="max"))
                 to_save = f"{self.file_path}/{ticker}_{tf}.csv"
                 print(f"[+] Saving: {to_save}")
                 df.to_csv(to_save)
@@ -224,7 +223,7 @@ class Watchlist(object):
             self._verbose = False
 
     def indicators(self, *args, **kwargs) -> any:
-        pd.DataFrame().ta.indicators(*args, **kwargs)
+        cudf.DataFrame().ta.indicators(*args, **kwargs)
 
     def __repr__(self) -> str:
         s = f"Watch(name='{self.name}', ds_name='{self.ds_name}', tickers[{len(self.tickers)}]='{', '.join(self.tickers)}', tf='{self.tf}', strategy[{self.strategy.total_ta()}]='{self.strategy.name}'"
@@ -232,4 +231,3 @@ class Watchlist(object):
             s += f", data[{len(self.data.keys())}])"
             return s
         return s + ")"
-```

@@ -1,0 +1,99 @@
+# -*- coding: utf-8 -*-
+import cudf
+import cupy as cp
+from cuml.metrics import log10 as cpLog10
+from cuml.metrics import log as cpLn
+from cudf_ta.volatility import atr
+from cudf_ta.utils import get_drift, get_offset, verify_series
+
+def chop(high, low, close, length=None, atr_length=None, ln=None, scalar=None, drift=None, offset=None, **kwargs):
+    """Indicator: Choppiness Index (CHOP)"""
+    # Validate Arguments
+    length = int(length) if length and length > 0 else 14
+    atr_length = int(atr_length) if atr_length is not None and atr_length > 0 else 1
+    ln = bool(ln) if isinstance(ln, bool) else False
+    scalar = float(scalar) if scalar else 100
+    high = verify_series(high, length)
+    low = verify_series(low, length)
+    close = verify_series(close, length)
+    drift = get_drift(drift)
+    offset = get_offset(offset)
+
+    if high is None or low is None or close is None: return
+
+    # Calculate Result
+    high_gp = cudf.Series(high)
+    low_gp = cudf.Series(low)
+    close_gp = cudf.Series(close)
+
+    diff = high_gp.rolling(length).max() - low_gp.rolling(length).min()
+
+    atr_ = atr(high=high_gp, low=low_gp, close=close_gp, length=atr_length)
+    atr_sum = atr_.rolling(length).sum()
+
+    chop = scalar
+    if ln:
+        chop *= (cpLn(atr_sum.values) - cpLn(diff.values)) / cpLn(length)
+    else:
+        chop *= (cpLog10(atr_sum.values) - cpLog10(diff.values)) / cpLog10(length)
+
+    chop = cudf.Series(chop)
+
+    # Offset
+    if offset != 0:
+        chop = chop.shift(offset)
+
+    # Handle fills
+    if "fillna" in kwargs:
+        chop.fillna(kwargs["fillna"], inplace=True)
+    if "fill_method" in kwargs:
+        chop.fillna(method=kwargs["fill_method"], inplace=True)
+
+    # Name and Categorize it
+    chop.name = f"CHOP{'ln' if ln else ''}_{length}_{atr_length}_{scalar}"
+    chop.category = "trend"
+
+    return chop
+
+
+chop.__doc__ = \
+"""Choppiness Index (CHOP)
+
+The Choppiness Index was created by Australian commodity trader
+E.W. Dreiss and is designed to determine if the market is choppy
+(trading sideways) or not choppy (trading within a trend in either
+direction). Values closer to 100 implies the underlying is choppier
+whereas values closer to 0 implies the underlying is trending.
+
+Sources:
+    https://www.tradingview.com/scripts/choppinessindex/
+    https://www.motivewave.com/studies/choppiness_index.htm
+
+Calculation:
+    Default Inputs:
+        length=14, scalar=100, drift=1
+    HH = high.rolling(length).max()
+    LL = low.rolling(length).min()
+
+    ATR_SUM = SUM(ATR(drift), length)
+    CHOP = scalar * (LOG10(ATR_SUM) - LOG10(HH - LL))
+    CHOP /= LOG10(length)
+
+Args:
+    high (pd.Series): Series of 'high's
+    low (pd.Series): Series of 'low's
+    close (pd.Series): Series of 'close's
+    length (int): It's period. Default: 14
+    atr_length (int): Length for ATR. Default: 1
+    ln (bool): If True, uses ln otherwise log10. Default: False
+    scalar (float): How much to magnify. Default: 100
+    drift (int): The difference period. Default: 1
+    offset (int): How many periods to offset the result. Default: 0
+
+Kwargs:
+    fillna (value, optional): cudf.DataFrame.fillna(value)
+    fill_method (value, optional): Type of fill method
+
+Returns:
+    pd.Series: New feature generated.
+"""

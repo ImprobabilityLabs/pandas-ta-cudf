@@ -1,10 +1,9 @@
-```python
 import cudf
 from cudf import DataFrame
 from time import perf_counter
 
 from .config import sample_data
-from .context import pandas_ta
+from .context import cudf_ta
 
 from unittest import skip, skipUnless, TestCase
 
@@ -78,7 +77,7 @@ class TestStrategyMethods(TestCase):
 
     @skipUnless(verbose, "verbose mode only")
     def test_all_strategy(self):
-        self.data.ta.strategy(pandas_ta.AllStrategy, verbose=verbose, timed=strategy_timed)
+        self.data.ta.strategy(cudf_ta.AllStrategy, verbose=verbose, timed=strategy_timed)
 
     @skipUnless(verbose, "verbose mode only")
     def test_all_name_strategy(self):
@@ -101,7 +100,7 @@ class TestStrategyMethods(TestCase):
     # @skip
     def test_common(self):
         self.category = "Common"
-        self.data.ta.strategy(pandas_ta.CommonStrategy, verbose=verbose, timed=strategy_timed)
+        self.data.ta.strategy(cudf_ta.CommonStrategy, verbose=verbose, timed=strategy_timed)
 
     def test_cycles_category(self):
         self.category = "Cycles"
@@ -124,7 +123,7 @@ class TestStrategyMethods(TestCase):
             {"kind": "ema", "close": "CUMLOGRET_1", "length": 5, "suffix": "CLR"}  # 1
         ]
 
-        custom = pandas_ta.Strategy(
+        custom = cudf_ta.Strategy(
             "Commons with Cumulative Log Return EMA Chain",  # name
             momo_bands_sma_ta,  # ta
             "Common indicators with specific lengths and a chained indicator",  # description
@@ -141,7 +140,7 @@ class TestStrategyMethods(TestCase):
             {"kind": "fisher", "params": (13, 7)}
         ]
 
-        custom = pandas_ta.Strategy(
+        custom = cudf_ta.Strategy(
             "Custom Args Tuple",
             custom_args_ta,
             "Allow for easy filling in indicator arguments by argument placement."
@@ -153,7 +152,7 @@ class TestStrategyMethods(TestCase):
 
         custom_args_ta = [{"kind": "bbands", "col_names": ("LB", "MB", "UB", "BW", "BP")}]
 
-        custom = pandas_ta.Strategy(
+        custom = cudf_ta.Strategy(
             "Custom Col Numbers Tuple",
             custom_args_ta,
             "Allow for easy renaming of resultant columns",
@@ -166,7 +165,7 @@ class TestStrategyMethods(TestCase):
 
         custom_args_ta = [{"kind": "macd", "col_numbers": (1,)}]
 
-        custom = pandas_ta.Strategy(
+        custom = cudf_ta.Strategy(
             "Custom Col Numbers Tuple",
             custom_args_ta,
             "Allow for easy selection of resultant columns",
@@ -183,7 +182,7 @@ class TestStrategyMethods(TestCase):
             {"kind": "ema", "close": "CUMLOGRET_1", "length": 5}  # 1
         ]
 
-        custom = pandas_ta.Strategy(
+        custom = cudf_ta.Strategy(
             "AMAT Log Returns",  # name
             amat_logret_ta,  # ta
             "AMAT Log Returns",  # description
@@ -247,10 +246,9 @@ class TestStrategyMethods(TestCase):
             {"kind": "ema", "close": "CUMLOGRET_1", "length": 5, "suffix": "CLR"}
         ]
 
-        custom = pandas_ta.Strategy(
+        custom = cudf_ta.Strategy(
             "Commons with Cumulative Log Return EMA Chain",  # name
             momo_bands_sma_ta,  # ta
             "Common indicators with specific lengths and a chained indicator",  # description
         )
         self.data.ta.strategy(custom, verbose=verbose, timed=strategy_timed)
-```

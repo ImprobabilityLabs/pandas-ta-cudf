@@ -1,6 +1,6 @@
 import cudf
 from .config import sample_data
-from .context import pandas_ta
+from .context import cudf_ta
 
 from unittest import TestCase
 

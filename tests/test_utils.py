@@ -1,6 +1,5 @@
-```python
 from .config import sample_data
-from .context import pandas_ta
+from .context import cudf_ta
 
 from unittest import skip, TestCase
 from unittest.mock import patch
@@ -34,7 +33,7 @@ class TestUtilities(TestCase):
 
     def setUp(self):
         self.crosseddf = DataFrame(data)
-        self.utils = pandas_ta.utils
+        self.utils = cudf_ta.utils
 
     def tearDown(self):
         del self.crosseddf
@@ -186,7 +185,7 @@ class TestUtilities(TestCase):
 
 
     def test_geometric_mean(self):
-        returns = pandas_ta.percent_return(self.data.close)
+        returns = cudf_ta.percent_return(self.data.close)
         result = self.utils.geometric_mean(returns)
         self.assertIsInstance(result, float)
 
@@ -229,7 +228,7 @@ class TestUtilities(TestCase):
         self.assertIsInstance(result["line"], Series)
 
     def test_log_geometric_mean(self):
-        returns = pandas_ta.percent_return(self.data.close)
+        returns = cudf_ta.percent_return(self.data.close)
         result = self.utils.log_geometric_mean(returns)
         self.assertIsInstance(result, float)
 
@@ -346,7 +345,6 @@ class TestUtilities(TestCase):
         self.assertEqual(657158400.0, result)
 
     def test_version(self):
-        result = pandas_ta.version
+        result = cudf_ta.version
         self.assertIsInstance(result, str)
         print(f"\nPandas TA v{result}")
-```

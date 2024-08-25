@@ -1,6 +1,5 @@
-```python
 from .config import sample_data
-from .context import cudf_ta  # Assuming a CuDF-based pandas_ta library equivalent
+from .context import cudf_ta  # Assuming a CuDF-based cudf_ta library equivalent
 
 from unittest import skip, TestCase
 import cudf
@@ -185,4 +184,3 @@ class TestOverlapExtension(TestCase):
         self.data.ta.zlma(append=True)
         self.assertIsInstance(self.data, cudf.DataFrame)
         self.assertEqual(self.data.columns[-1], "ZL_EMA_10")
-```

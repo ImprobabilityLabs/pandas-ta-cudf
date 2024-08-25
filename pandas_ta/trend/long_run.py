@@ -1,4 +1,8 @@
+Here's the refactored code to work with CuDF and utilize GPU processing:
+
+```
 # -*- coding: utf-8 -*-
+import cudf
 from .decreasing import decreasing
 from .increasing import increasing
 from pandas_ta.utils import get_offset, verify_series
@@ -14,9 +18,13 @@ def long_run(fast, slow, length=None, offset=None, **kwargs):
 
     if fast is None or slow is None: return
 
+    # Convert to CuDF DataFrames
+    fast_cudf = cudf.DataFrame(fast)
+    slow_cudf = cudf.DataFrame(slow)
+
     # Calculate Result
-    pb = increasing(fast, length) & decreasing(slow, length)  # potential bottom or bottom
-    bi = increasing(fast, length) & increasing(slow, length)  # fast and slow are increasing
+    pb = increasing(fast_cudf, length) & decreasing(slow_cudf, length)  # potential bottom or bottom
+    bi = increasing(fast_cudf, length) & increasing(slow_cudf, length)  # fast and slow are increasing
     long_run = pb | bi
 
     # Offset
@@ -34,3 +42,4 @@ def long_run(fast, slow, length=None, offset=None, **kwargs):
     long_run.category = "trend"
 
     return long_run
+```

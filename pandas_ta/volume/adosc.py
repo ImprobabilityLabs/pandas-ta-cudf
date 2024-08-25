@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-from .ad import ad
+import cudf
 from pandas_ta import Imports
 from pandas_ta.overlap import ema
 from pandas_ta.utils import get_offset, verify_series
@@ -24,7 +23,8 @@ def adosc(high, low, close, volume, open_=None, fast=None, slow=None, talib=None
     # Calculate Result
     if Imports["talib"] and mode_tal:
         from talib import ADOSC
-        adosc = ADOSC(high, low, close, volume, fast, slow)
+        adosc = ADOSC(high.to_pandas(), low.to_pandas(), close.to_pandas(), volume.to_pandas(), fast, slow)
+        adosc = cudf.Series(adosc)
     else:
         ad_ = ad(high=high, low=low, close=close, volume=volume, open_=open_)
         fast_ad = ema(close=ad_, length=fast, **kwargs)
@@ -68,11 +68,11 @@ Calculation:
     ADOSC = fast_ad - slow_ad
 
 Args:
-    high (pd.Series): Series of 'high's
-    low (pd.Series): Series of 'low's
-    close (pd.Series): Series of 'close's
-    open (pd.Series): Series of 'open's
-    volume (pd.Series): Series of 'volume's
+    high (cuDF.Series): Series of 'high's
+    low (cuDF.Series): Series of 'low's
+    close (cuDF.Series): Series of 'close's
+    open (cuDF.Series): Series of 'open's
+    volume (cuDF.Series): Series of 'volume's
     fast (int): The short period. Default: 12
     slow (int): The long period. Default: 26
     talib (bool): If TA Lib is installed and talib is True, Returns the TA Lib
@@ -84,5 +84,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cuDF.Series: New feature generated.
 """

@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import cudf
 from pandas_ta.utils import get_offset, verify_series
 
 
@@ -12,8 +13,11 @@ def kurtosis(close, length=None, offset=None, **kwargs):
 
     if close is None: return
 
+    # Convert to cuDF
+    close = cudf.from_pandas(close)
+
     # Calculate Result
-    kurtosis = close.rolling(length, min_periods=min_periods).kurt()
+    kurtosis = close.rolling(window=length, min_periods=min_periods).kurt()
 
     # Offset
     if offset != 0:
@@ -43,7 +47,7 @@ Calculation:
     KURTOSIS = close.rolling(length).kurt()
 
 Args:
-    close (pd.Series): Series of 'close's
+    close (cudf.Series): Series of 'close's
     length (int): It's period. Default: 30
     offset (int): How many periods to offset the result. Default: 0
 
@@ -52,5 +56,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cudf.Series: New feature generated.
 """

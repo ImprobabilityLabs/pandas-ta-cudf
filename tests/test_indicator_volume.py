@@ -1,9 +1,10 @@
+```python
 from .config import error_analysis, sample_data, CORRELATION, CORRELATION_THRESHOLD, VERBOSE
 from .context import pandas_ta
 
 from unittest import TestCase, skip
 import pandas.testing as pdt
-from pandas import DataFrame, Series
+from cudf import DataFrame, Series
 
 import talib as tal
 
@@ -11,7 +12,7 @@ import talib as tal
 class TestVolume(TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.data = sample_data
+        cls.data = sample_data.to_pandas()  # Convert sample_data to pandas DataFrame for comparison
         cls.data.columns = cls.data.columns.str.lower()
         cls.open = cls.data["open"]
         cls.high = cls.data["high"]
@@ -40,14 +41,14 @@ class TestVolume(TestCase):
         self.assertEqual(result.name, "AD")
 
         try:
-            expected = tal.AD(self.high, self.low, self.close, self.volume_)
-            pdt.assert_series_equal(result, expected, check_names=False)
+            expected = Series(tal.AD(self.high.to_pandas(), self.low.to_pandas(), self.close.to_pandas(), self.volume_.to_pandas()))  # Convert to pandas.series
+            pdt.assert_series_equal(result.to_pandas(), expected, check_names=False)
         except AssertionError:
             try:
-                corr = pandas_ta.utils.df_error_analysis(result, expected, col=CORRELATION)
+                corr = pandas_ta.utils.df_error_analysis(result.to_pandas(), expected, col=CORRELATION)
                 self.assertGreater(corr, CORRELATION_THRESHOLD)
             except Exception as ex:
-                error_analysis(result, CORRELATION, ex)
+                error_analysis(result.to_pandas(), CORRELATION, ex)
 
         result = pandas_ta.ad(self.high, self.low, self.close, self.volume_)
         self.assertIsInstance(result, Series)
@@ -64,14 +65,14 @@ class TestVolume(TestCase):
         self.assertEqual(result.name, "ADOSC_3_10")
 
         try:
-            expected = tal.ADOSC(self.high, self.low, self.close, self.volume_)
-            pdt.assert_series_equal(result, expected, check_names=False)
+            expected = Series(tal.ADOSC(self.high.to_pandas(), self.low.to_pandas(), self.close.to_pandas(), self.volume_.to_pandas()))  # Convert to pandas.series
+            pdt.assert_series_equal(result.to_pandas(), expected, check_names=False)
         except AssertionError:
             try:
-                corr = pandas_ta.utils.df_error_analysis(result, expected, col=CORRELATION)
+                corr = pandas_ta.utils.df_error_analysis(result.to_pandas(), expected, col=CORRELATION)
                 self.assertGreater(corr, CORRELATION_THRESHOLD)
             except Exception as ex:
-                error_analysis(result, CORRELATION, ex)
+                error_analysis(result.to_pandas(), CORRELATION, ex)
 
         result = pandas_ta.adosc(self.high, self.low, self.close, self.volume_)
         self.assertIsInstance(result, Series)
@@ -108,14 +109,14 @@ class TestVolume(TestCase):
         self.assertEqual(result.name, "MFI_14")
 
         try:
-            expected = tal.MFI(self.high, self.low, self.close, self.volume_)
-            pdt.assert_series_equal(result, expected, check_names=False)
+            expected = Series(tal.MFI(self.high.to_pandas(), self.low.to_pandas(), self.close.to_pandas(), self.volume_.to_pandas()))  # Convert to pandas.series
+            pdt.assert_series_equal(result.to_pandas(), expected, check_names=False)
         except AssertionError:
             try:
-                corr = pandas_ta.utils.df_error_analysis(result, expected, col=CORRELATION)
+                corr = pandas_ta.utils.df_error_analysis(result.to_pandas(), expected, col=CORRELATION)
                 self.assertGreater(corr, CORRELATION_THRESHOLD)
             except Exception as ex:
-                error_analysis(result, CORRELATION, ex)
+                error_analysis(result.to_pandas(), CORRELATION, ex)
 
         result = pandas_ta.mfi(self.high, self.low, self.close, self.volume_)
         self.assertIsInstance(result, Series)
@@ -132,14 +133,14 @@ class TestVolume(TestCase):
         self.assertEqual(result.name, "OBV")
 
         try:
-            expected = tal.OBV(self.close, self.volume_)
-            pdt.assert_series_equal(result, expected, check_names=False)
+            expected = Series(tal.OBV(self.close.to_pandas(), self.volume_.to_pandas()))  # Convert to pandas.series
+            pdt.assert_series_equal(result.to_pandas(), expected, check_names=False)
         except AssertionError:
             try:
-                corr = pandas_ta.utils.df_error_analysis(result, expected, col=CORRELATION)
+                corr = pandas_ta.utils.df_error_analysis(result.to_pandas(), expected, col=CORRELATION)
                 self.assertGreater(corr, CORRELATION_THRESHOLD)
             except Exception as ex:
-                error_analysis(result, CORRELATION, ex)
+                error_analysis(result.to_pandas(), CORRELATION, ex)
 
         result = pandas_ta.obv(self.close, self.volume_)
         self.assertIsInstance(result, Series)
@@ -160,10 +161,10 @@ class TestVolume(TestCase):
         self.assertIsInstance(result, Series)
         self.assertEqual(result.name, "PVR")
         # sample indicator values from SPY
-        self.assertEqual(result[0], 1)
-        self.assertEqual(result[1], 3)
-        self.assertEqual(result[4], 2)
-        self.assertEqual(result[6], 4)
+        self.assertEqual(result.iloc[0], 1)
+        self.assertEqual(result.iloc[1], 3)
+        self.assertEqual(result.iloc[4], 2)
+        self.assertEqual(result.iloc[6], 4)
 
     def test_pvt(self):
         result = pandas_ta.pvt(self.close, self.volume_)
@@ -174,3 +175,4 @@ class TestVolume(TestCase):
         result = pandas_ta.vp(self.close, self.volume_)
         self.assertIsInstance(result, DataFrame)
         self.assertEqual(result.name, "VP_10")
+```

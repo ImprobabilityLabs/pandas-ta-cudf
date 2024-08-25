@@ -1,7 +1,5 @@
-# -*- coding: utf-8 -*-
-from pandas import DataFrame
-from pandas_ta.utils import get_drift, get_offset, verify_series
-
+import cudf
+from cudf.utils import get_drift, get_offset, verify_series
 
 def tsignals(trend, asbool=None, trend_reset=0, trade_offset=None, drift=None, offset=None, **kwargs):
     """Indicator: Trend Signals"""
@@ -9,7 +7,7 @@ def tsignals(trend, asbool=None, trend_reset=0, trade_offset=None, drift=None, o
     trend = verify_series(trend)
     asbool = bool(asbool) if isinstance(asbool, bool) else False
     trend_reset = int(trend_reset) if trend_reset and isinstance(trend_reset, int) else 0
-    if trade_offset !=0:
+    if trade_offset != 0:
         trade_offset = int(trade_offset) if trade_offset and isinstance(trade_offset, int) else 0
     drift = get_drift(drift)
     offset = get_offset(offset)
@@ -31,7 +29,7 @@ def tsignals(trend, asbool=None, trend_reset=0, trade_offset=None, drift=None, o
         f"TS_Entries": entries,
         f"TS_Exits": exits,
     }
-    df = DataFrame(data, index=trends.index)
+    df = cudf.DataFrame(data, index=trends.index)
 
     # Offset
     if offset != 0:
@@ -48,7 +46,6 @@ def tsignals(trend, asbool=None, trend_reset=0, trade_offset=None, drift=None, o
     df.category = "trend"
 
     return df
-
 
 tsignals.__doc__ = \
 """Trend Signals

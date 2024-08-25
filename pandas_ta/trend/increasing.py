@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+from cudf import Series
 from pandas_ta.utils import get_drift, get_offset, is_percent, verify_series
 
 def increasing(close, length=None, strict=None, asint=None, percent=None, drift=None, offset=None, **kwargs):
@@ -48,7 +48,6 @@ def increasing(close, length=None, strict=None, asint=None, percent=None, drift=
 
     return increasing
 
-
 increasing.__doc__ = \
 """Increasing
 
@@ -67,7 +66,7 @@ Calculation:
         increasing = increasing.astype(int)
 
 Args:
-    close (pd.Series): Series of 'close's
+    close (cudf.Series): Series of 'close's
     length (int): It's period. Default: 1
     strict (bool): If True, checks if the series is continuously increasing over the period. Default: False
     percent (float): Percent as an integer. Default: None
@@ -80,5 +79,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cudf.Series: New feature generated.
 """

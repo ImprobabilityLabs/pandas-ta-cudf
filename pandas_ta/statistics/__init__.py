@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
-from .entropy import entropy
-from .kurtosis import kurtosis
+import cudf
+from cuml.metrics import entropy
+from cuml.statistics import kurtosis
 from .mad import mad
-from .median import median
-from .quantile import quantile
-from .skew import skew
-from .stdev import stdev
+from cuml.metrics import median
+from cuml.metrics import quantile
+from cuml.statistics import skew
+from cuml.metrics import stdev
 from .tos_stdevall import tos_stdevall
-from .variance import variance
-from .zscore import zscore
+from cuml.metrics import variance
+from cuml.metrics import zscore

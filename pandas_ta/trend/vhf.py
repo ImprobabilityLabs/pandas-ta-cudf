@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-from numpy import fabs as npFabs
+import cudf
+from cuml.utils import get_output_type
 from pandas_ta.utils import get_drift, get_offset, non_zero_range, verify_series
-
 
 def vhf(close, length=None, drift=None, offset=None, **kwargs):
     """Indicator: Vertical Horizontal Filter (VHF)"""
@@ -9,15 +9,16 @@ def vhf(close, length=None, drift=None, offset=None, **kwargs):
     length = int(length) if length and length > 0 else 28
     close = verify_series(close, length)
     drift = get_drift(drift)
-    offset = get_offset(offset)
+    offset = get_output_type(offset)
 
     if close is None: return
 
     # Calculate Result
-    hcp = close.rolling(length).max()
-    lcp = close.rolling(length).min()
-    diff = npFabs(close.diff(drift))
-    vhf  = npFabs(non_zero_range(hcp, lcp)) / diff.rolling(length).sum()
+    close = cudf.Series(close)
+    hcp = close.rolling(window=length).max()
+    lcp = close.rolling(window=length).min()
+    diff = cudf.Series(close).diff(drift).abs()
+    vhf  = (hcp - lcp).abs() / diff.rolling(window=length).sum()
 
     # Offset
     if offset != 0:

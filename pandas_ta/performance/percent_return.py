@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
+import cudf
+from cudf.core import Series
 from pandas_ta.utils import get_offset, verify_series
-
 
 def percent_return(close, length=None, cumulative=None, offset=None, **kwargs):
     """Indicator: Percent Return"""
@@ -16,7 +17,7 @@ def percent_return(close, length=None, cumulative=None, offset=None, **kwargs):
     if cumulative:
         pct_return = (close / close.iloc[0]) - 1
     else:
-        pct_return = close.pct_change(length) # (close / close.shift(length)) - 1
+        pct_return = close.pct_change(length)  # (close / close.shift(length)) - 1
 
     # Offset
     if offset != 0:
@@ -51,7 +52,7 @@ Calculation:
     CUMPCTRET = PCTRET.cumsum() if cumulative
 
 Args:
-    close (pd.Series): Series of 'close's
+    close (cudf.Series): Series of 'close's
     length (int): It's period. Default: 20
     cumulative (bool): If True, returns the cumulative returns. Default: False
     offset (int): How many periods to offset the result. Default: 0
@@ -61,5 +62,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cudf.Series: New feature generated.
 """

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-from pandas import Series
+import cudf
+from cuml.dask.common.utils import get_client
 from pandas_ta import Imports
 from pandas_ta.utils import get_offset, verify_series
 
@@ -20,16 +21,16 @@ def wma(close, length=None, asc=None, talib=None, offset=None, **kwargs):
         from talib import WMA
         wma = WMA(close, length)
     else:
-        from numpy import arange as npArange
-        from numpy import dot as npDot
+        from cuml.linear_algebra import dot as cuDot
+        from numba import cuda
 
         total_weight = 0.5 * length * (length + 1)
-        weights_ = Series(npArange(1, length + 1))
+        weights_ = cudf.Series(cuda.to_device(range(1, length + 1)))
         weights = weights_ if asc else weights_[::-1]
 
         def linear(w):
             def _compute(x):
-                return npDot(x, w) / total_weight
+                return cuDot(x, w) / total_weight
             return _compute
 
         close_ = close.rolling(length, min_periods=length)

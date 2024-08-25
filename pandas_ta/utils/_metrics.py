@@ -1,10 +1,13 @@
+```python
 # -*- coding: utf-8 -*-
 from typing import Tuple
 
-from numpy import log as npLog
-from numpy import nan as npNaN
-from numpy import sqrt as npSqrt
-from pandas import Series, Timedelta
+from cudf import Series
+from cudf import from_pandas as cdfrom_pandas
+from cudf import Timedelta
+
+import cupy as cp
+from pandas._libs.tslibs.timestamps import Timestamp
 
 from ._core import verify_series
 from ._time import total_time
@@ -17,7 +20,7 @@ def cagr(close: Series) -> float:
     """Compounded Annual Growth Rate
 
     Args:
-        close (pd.Series): Series of 'close's
+        close (cudf.Series): Series of 'close's
 
     >>> result = ta.cagr(df.close)
     """
@@ -31,7 +34,7 @@ def calmar_ratio(close: Series, method: str = "percent", years: int = 3) -> floa
     the past three years.
 
     Args:
-        close (pd.Series): Series of 'close's
+        close (cudf.Series): Series of 'close's
         method (str): Max DD calculation options: 'dollar', 'percent', 'log'.
             Default: 'dollar'
         years (int): The positive number of years to use. Default: 3
@@ -55,7 +58,7 @@ def downside_deviation(returns: Series, benchmark_rate: float = 0.0, tf: str = "
     number of periods per year seen in the data.
 
     Args:
-        close (pd.Series): Series of 'close's
+        close (cudf.Series): Series of 'close's
         benchmark_rate (float): Benchmark Rate to use. Default: 0.0
         tf (str): Time Frame options: 'days', 'weeks', 'months', and 'years'.
             Default: 'years'
@@ -70,23 +73,23 @@ def downside_deviation(returns: Series, benchmark_rate: float = 0.0, tf: str = "
 
     downside = adjusted_benchmark_rate - returns
     downside_sum_of_squares = (downside[downside > 0] ** 2).sum()
-    downside_deviation = npSqrt(downside_sum_of_squares / (returns.shape[0] - 1))
-    return downside_deviation * npSqrt(days_per_year)
+    downside_deviation = cp.sqrt(downside_sum_of_squares / (returns.shape[0] - 1))
+    return downside_deviation * cp.sqrt(days_per_year)
 
 
 def jensens_alpha(returns: Series, benchmark_returns: Series) -> float:
     """Jensen's 'Alpha' of a series and a benchmark.
 
     Args:
-        returns (pd.Series): Series of 'returns's
-        benchmark_returns (pd.Series): Series of 'benchmark_returns's
+        returns (cudf.Series): Series of 'returns's
+        benchmark_returns (cudf.Series): Series of 'benchmark_returns's
 
     >>> result = ta.jensens_alpha(returns, benchmark_returns)
     """
     returns = verify_series(returns)
     benchmark_returns = verify_series(benchmark_returns)
 
-    benchmark_returns.interpolate(inplace=True)
+    benchmark_returns = cdfrom_pandas(benchmark_returns.to_pandas().interpolate())
     return linear_regression(benchmark_returns, returns)["a"]
 
 
@@ -94,12 +97,12 @@ def log_max_drawdown(close: Series) -> float:
     """Log Max Drawdown of a series.
 
     Args:
-        close (pd.Series): Series of 'close's
+        close (cudf.Series): Series of 'close's
 
     >>> result = ta.log_max_drawdown(close)
     """
     close = verify_series(close)
-    log_return = npLog(close.iloc[-1]) - npLog(close.iloc[0])
+    log_return = cp.log(close.iloc[-1]) - cp.log(close.iloc[0])
     return log_return - max_drawdown(close, method="log")
 
 
@@ -107,7 +110,7 @@ def max_drawdown(close: Series, method:str = None, all:bool = False) -> float:
     """Maximum Drawdown from close. Default: 'dollar'.
 
     Args:
-        close (pd.Series): Series of 'close's
+        close (cudf.Series): Series of 'close's
         method (str): Max DD calculation options: 'dollar', 'percent', 'log'.
             Default: 'dollar'
         all (bool): If True, it returns all three methods as a dict.
@@ -138,7 +141,7 @@ def optimal_leverage(
     """Optimal Leverage of a series. NOTE: Incomplete. Do NOT use.
 
     Args:
-        close (pd.Series): Series of 'close's
+        close (cudf.Series): Series of 'close's
         benchmark_rate (float): Benchmark Rate to use. Default: 0.0
         period (int, float): Period to use to calculate Mean Annual Return and
             Annual Standard Deviation.
@@ -155,7 +158,7 @@ def optimal_leverage(
     # sharpe = sharpe_ratio(close, benchmark_rate=benchmark_rate, log=log, use_cagr=use_cagr, period=period)
 
     period_mu = period * returns.mean()
-    period_std = npSqrt(period) * returns.std()
+    period_std = cp.sqrt(period) * returns.std()
 
     mean_excess_return = period_mu - benchmark_rate
     # sharpe = mean_excess_return / period_std
@@ -169,7 +172,7 @@ def pure_profit_score(close: Series) -> Tuple[float, int]:
     """Pure Profit Score of a series.
 
     Args:
-        close (pd.Series): Series of 'close's
+        close (cudf.Series): Series of 'close's
 
     >>> result = ta.pure_profit_score(df.close)
     """
@@ -177,7 +180,7 @@ def pure_profit_score(close: Series) -> Tuple[float, int]:
     close_index = Series(0, index=close.reset_index().index)
 
     r = linear_regression(close_index, close)["r"]
-    if r is not npNaN:
+    if r is not cp.nan:
         return r * cagr(close)
     return 0
 
@@ -186,7 +189,7 @@ def sharpe_ratio(close: Series, benchmark_rate: float = 0.0, log: bool = False, 
     """Sharpe Ratio of a series.
 
     Args:
-        close (pd.Series): Series of 'close's
+        close (cudf.Series): Series of 'close's
         benchmark_rate (float): Benchmark Rate to use. Default: 0.0
         log (bool): If True, calculates log_return. Otherwise it returns
             percent_return. Default: False
@@ -204,7 +207,7 @@ def sharpe_ratio(close: Series, benchmark_rate: float = 0.0, log: bool = False, 
         return cagr(close) / volatility(close, returns, log=log)
     else:
         period_mu = period * returns.mean()
-        period_std = npSqrt(period) * returns.std()
+        period_std = cp.sqrt(period) * returns.std()
         return (period_mu - benchmark_rate) / period_std
 
 
@@ -212,7 +215,7 @@ def sortino_ratio(close: Series, benchmark_rate: float = 0.0, log: bool = False)
     """Sortino Ratio of a series.
 
     Args:
-        close (pd.Series): Series of 'close's
+        close (cudf.Series): Series of 'close's
         benchmark_rate (float): Benchmark Rate to use. Default: 0.0
         log (bool): If True, calculates log_return. Otherwise it returns
             percent_return. Default: False
@@ -231,7 +234,7 @@ def volatility(close: Series, tf: str = "years", returns: bool = False, log: boo
     """Volatility of a series. Default: 'years'
 
     Args:
-        close (pd.Series): Series of 'close's
+        close (cudf.Series): Series of 'close's
         tf (str): Time Frame options: 'days', 'weeks', 'months', and 'years'.
             Default: 'years'
         returns (bool): If True, then it replace the close Series with the user
@@ -253,5 +256,6 @@ def volatility(close: Series, tf: str = "years", returns: bool = False, log: boo
     # factor = returns.shape[0] / total_time(returns, tf)
     # if kwargs.pop("nearest_day", False) and tf.lower() == "years":
         # factor = int(factor + 1)
-    # return npSqrt(factor) * returns.std()
+    # return cp.sqrt(factor) * returns.std()
     return returns
+```

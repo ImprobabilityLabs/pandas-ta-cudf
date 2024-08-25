@@ -1,58 +1,59 @@
 # -*- coding: utf-8 -*-
-from numpy import exp as npExp
-from numpy import nan as npNaN
-from pandas import Series
-from pandas_ta.utils import get_offset, verify_series
+import cudf
+from numba import cuda
+import math
+from typing import Tuple
 
+@cuda.jit
+def alma_kernel(wtd, close, result, cum_sum, length, sigma, m, s):
+    i = cuda.grid(1)
+    if i < close.size - length + 1:
+        window_sum = 0
+        cum_sum = 0
+        for j in range(length):
+            window_sum += wtd[j] * close[i + j]
+            cum_sum += wtd[j]
+        almean = window_sum / cum_sum
+        result[i + length - 1] = almean
 
-def alma(close, length=None, sigma=None, distribution_offset=None, offset=None, **kwargs):
+def alma(close: cudf.Series, length: int = 10, sigma: float = 6.0, distribution_offset: float = 0.85, offset: int = 0, **kwargs) -> cudf.Series:
     """Indicator: Arnaud Legoux Moving Average (ALMA)"""
     # Validate Arguments
     length = int(length) if length and length > 0 else 10
     sigma = float(sigma) if sigma and sigma > 0 else 6.0
     distribution_offset = float(distribution_offset) if distribution_offset and distribution_offset > 0 else 0.85
-    close = verify_series(close, length)
-    offset = get_offset(offset)
+    close = cudf.Series(close)
+    offset = offset
 
     if close is None: return
 
     # Pre-Calculations
     m = distribution_offset * (length - 1)
     s = length / sigma
-    wtd = list(range(length))
-    for i in range(0, length):
-        wtd[i] = npExp(-1 * ((i - m) * (i - m)) / (2 * s * s))
+    wtd = cudf.Series([math.exp(-1 * ((i - m) * (i - m)) / (2 * s * s)) for i in range(length)])
+    result = cudf.Series([float('nan') for _ in range(length - 1)] + [0], index=close.index)
 
     # Calculate Result
-    result = [npNaN for _ in range(0, length - 1)] + [0]
-    for i in range(length, close.size):
-        window_sum = 0
-        cum_sum = 0
-        for j in range(0, length):
-            # wtd = math.exp(-1 * ((j - m) * (j - m)) / (2 * s * s))        # moved to pre-calc for efficiency
-            window_sum = window_sum + wtd[j] * close.iloc[i - j]
-            cum_sum = cum_sum + wtd[j]
-
-        almean = window_sum / cum_sum
-        result.append(npNaN) if i == length else result.append(almean)
-
-    alma = Series(result, index=close.index)
+    threadsperblock = 256
+    blockspergrid = (close.size + threadsperblock - 1) // threadsperblock
+    alma_kernel[blockspergrid, threadsperblock](cuda.to_device(wtd.values), cuda.to_device(close.values), cuda.to_device(result.values), cuda.device_array((close.size - length + 1,), dtype=cudf.Series.dtype), length, sigma, m, s)
+    result = cudf.Series(result, index=close.index)
 
     # Offset
     if offset != 0:
-        alma = alma.shift(offset)
+        result = result.shift(offset)
 
     # Handle fills
     if "fillna" in kwargs:
-        alma.fillna(kwargs["fillna"], inplace=True)
+        result.fillna(kwargs["fillna"], inplace=True)
     if "fill_method" in kwargs:
-        alma.fillna(method=kwargs["fill_method"], inplace=True)
+        result.fillna(method=kwargs["fill_method"], inplace=True)
 
     # Name & Category
-    alma.name = f"ALMA_{length}_{sigma}_{distribution_offset}"
-    alma.category = "overlap"
+    result.name = f"ALMA_{length}_{sigma}_{distribution_offset}"
+    result.category = "overlap"
 
-    return alma
+    return result
 
 
 alma.__doc__ = \
@@ -64,7 +65,7 @@ sensitivity of the indicator. Sigma is another parameter that is responsible for
 the shape of the curve coefficients. This moving average reduces lag of the data
 in conjunction with smoothing to reduce noise.
 
-Implemented for Pandas TA by rengel8 based on the source provided below.
+Implemented for CuDF TA by rengel8 based on the source provided below.
 
 Sources:
     https://www.prorealcode.com/prorealtime-indicators/alma-arnaud-legoux-moving-average/
@@ -73,7 +74,7 @@ Calculation:
     refer to provided source
 
 Args:
-    close (pd.Series): Series of 'close's
+    close (CuDF.Series): Series of 'close's
     length (int): It's period, window size. Default: 10
     sigma (float): Smoothing value. Default 6.0
     distribution_offset (float): Value to offset the distribution min 0
@@ -85,5 +86,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    CuDF.Series: New feature generated.
 """

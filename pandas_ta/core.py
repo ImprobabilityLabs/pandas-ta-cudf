@@ -1,3 +1,4 @@
+```python
 # -*- coding: utf-8 -*-
 from dataclasses import dataclass, field
 from multiprocessing import cpu_count, Pool
@@ -6,9 +7,9 @@ from time import perf_counter
 from typing import List, Tuple
 from warnings import simplefilter
 
-import pandas as pd
+import cudf
+import cupy as cp
 from numpy import log10 as npLog10
-from numpy import ndarray as npNdarray
 from pandas.core.base import PandasObject
 
 from pandas_ta import Category, Imports, version
@@ -25,36 +26,14 @@ from pandas_ta.volume import *
 from pandas_ta.utils import *
 
 
-df = pd.DataFrame()
+df = cudf.DataFrame()
 
 # Strategy DataClass
 @dataclass
 class Strategy:
-    """Strategy DataClass
-    A way to name and group your favorite indicators
-
-    Args:
-        name (str): Some short memorable string.  Note: Case-insensitive "All" is reserved.
-        ta (list of dicts): A list of dicts containing keyword arguments where "kind" is the indicator.
-        description (str): A more detailed description of what the Strategy tries to capture. Default: None
-        created (str): At datetime string of when it was created. Default: Automatically generated. *Subject to change*
-
-    Example TA:
-    ta = [
-        {"kind": "sma", "length": 200},
-        {"kind": "sma", "close": "volume", "length": 50},
-        {"kind": "bbands", "length": 20},
-        {"kind": "rsi"},
-        {"kind": "macd", "fast": 8, "slow": 21},
-        {"kind": "sma", "close": "volume", "length": 20, "prefix": "VOLUME"},
-    ]
-    """
-
     name: str  # = None # Required.
     ta: List = field(default_factory=list)  # Required.
-    # Helpful. More descriptive version or notes or w/e.
     description: str = "TA Description"
-    # Optional. Gets Exchange Time and Local Time execution time
     created: str = get_time(to_string=True)
 
     def __post_init__(self):
@@ -63,7 +42,7 @@ class Strategy:
         required_args = ["[X] Strategy requires the following argument(s):"]
 
         name_is_str = isinstance(self.name, str)
-        ta_is_list = isinstance(self.ta, list)
+        ta_is_list = isinstance(self.ta, List)
 
         if self.name is None or not name_is_str:
             required_args.append(' - name. Must be a string. Example: "My TA". Note: "all" is reserved.')
@@ -72,9 +51,6 @@ class Strategy:
         if self.ta is None:
             self.ta = None
         elif self.ta is not None and ta_is_list and self.total_ta() > 0:
-            # Check that all elements of the list are dicts.
-            # Does not check if the dicts values are valid indicator kwargs
-            # User must check indicator documentation for all indicators args.
             is_ta = all([isinstance(_, dict) and len(_.keys()) > 0 for _ in self.ta])
         else:
             s = " - ta. Format is a list of dicts. Example: [{'kind': 'sma', 'length': 10}]"
@@ -110,15 +86,15 @@ CommonStrategy = Strategy(
 )
 
 
-# Base Class for extending a Pandas DataFrame
+# Base Class for extending a CuDF DataFrame
 class BasePandasObject(PandasObject):
-    """Simple PandasObject Extension
+    """Simple CuDFObject Extension
 
     Ensures the DataFrame is not empty and has columns.
     It would be a sad Panda otherwise.
 
     Args:
-        df (pd.DataFrame): Extends Pandas DataFrame
+        df (cudf.DataFrame): Extends CuDF DataFrame
     """
 
     def __init__(self, df, **kwargs):
@@ -138,17 +114,8 @@ class BasePandasObject(PandasObject):
                 "Dividends": "dividends",
                 "Stock Splits": "split",
             }
-            # Preemptively drop the rows that are all NaNs
-            # Might need to be moved to AnalysisIndicators.__call__() to be
-            #   toggleable via kwargs.
-            # df.dropna(axis=0, inplace=True)
             # Preemptively rename columns to lowercase
-            df.rename(columns=common_names, errors="ignore", inplace=True)
-
-            # Preemptively lowercase the index
-            index_name = df.index.name
-            if index_name is not None:
-                df.index.rename(index_name.lower(), inplace=True)
+            df.rename(columns=common_names, inplace=True)
 
             self._df = df
         else:
@@ -158,95 +125,16 @@ class BasePandasObject(PandasObject):
         raise NotImplementedError()
 
 
-# Pandas TA - DataFrame Analysis Indicators
-@pd.api.extensions.register_dataframe_accessor("ta")
+# CuDF TA - DataFrame Analysis Indicators
+@cudf.api.extensions.register_dataframe_accessor("ta")
 class AnalysisIndicators(BasePandasObject):
     """
-    This Pandas Extension is named 'ta' for Technical Analysis. In other words,
-    it is a Numerical Time Series Feature Generator where the Time Series data
-    is biased towards Financial Market data; typical data includes columns
-    named :"open", "high", "low", "close", "volume".
-
-    This TA Library hopefully allows you to apply familiar and unique Technical
-    Analysis Indicators easily with the DataFrame Extension named 'ta'. Even
-    though 'ta' is a Pandas DataFrame Extension, you can still call Technical
-    Analysis indicators individually if you are more comfortable with that
-    approach or it allows you to easily and automatically apply the indicators
-    with the strategy method. See: help(ta.strategy).
-
-    By default, the 'ta' extension uses lower case column names: open, high,
-    low, close, and volume. You can override the defaults by providing the it's
-    replacement name when calling the indicator. For example, to call the
-    indicator hl2().
-
-    With 'default' columns: open, high, low, close, and volume.
-    >>> df.ta.hl2()
-    >>> df.ta(kind="hl2")
-
-    With DataFrame columns: Open, High, Low, Close, and Volume.
-    >>> df.ta.hl2(high="High", low="Low")
-    >>> df.ta(kind="hl2", high="High", low="Low")
-
-    If you do not want to use a DataFrame Extension, just call it normally.
-    >>> sma10 = ta.sma(df["Close"]) # Default length=10
-    >>> sma50 = ta.sma(df["Close"], length=50)
-    >>> ichimoku, span = ta.ichimoku(df["High"], df["Low"], df["Close"])
-
-    Args:
-        kind (str, optional): Default: None. Kind is the 'name' of the indicator.
-            It converts kind to lowercase before calling.
-        timed (bool, optional): Default: False. Curious about the execution
-            speed?
-        kwargs: Extension specific modifiers.
-            append (bool, optional): Default: False. When True, it appends the
-            resultant column(s) to the DataFrame.
-
-    Returns:
-        Most Indicators will return a Pandas Series. Others like MACD, BBANDS,
-        KC, et al will return a Pandas DataFrame. Ichimoku on the other hand
-        will return two DataFrames, the Ichimoku DataFrame for the known period
-        and a Span DataFrame for the future of the Span values.
-
-    Let's get started!
-
-    1. Loading the 'ta' module:
-    >>> import pandas as pd
-    >>> import ta as ta
-
-    2. Load some data:
-    >>> df = pd.read_csv("AAPL.csv", index_col="date", parse_dates=True)
-
-    3. Help!
-    3a. General Help:
-    >>> help(df.ta)
-    >>> df.ta()
-    3b. Indicator Help:
-    >>> help(ta.apo)
-    3c. Indicator Extension Help:
-    >>> help(df.ta.apo)
-
-    4. Ways of calling an indicator.
-    4a. Standard: Calling just the APO indicator without "ta" DataFrame extension.
-    >>> ta.apo(df["close"])
-    4b. DataFrame Extension: Calling just the APO indicator with "ta" DataFrame extension.
-    >>> df.ta.apo()
-    4c. DataFrame Extension (kind): Calling APO using 'kind'
-    >>> df.ta(kind="apo")
-    4d. Strategy:
-    >>> df.ta.strategy("All") # Default
-    >>> df.ta.strategy(ta.Strategy("My Strat", ta=[{"kind": "apo"}])) # Custom
-
-    5. Working with kwargs
-    5a. Append the result to the working df.
-    >>> df.ta.apo(append=True)
-    5b. Timing an indicator.
-    >>> apo = df.ta(kind="apo", timed=True)
-    >>> print(apo.timed)
+    This CuDF Extension is named 'ta' for Technical Analysis.
     """
 
     _adjusted = None
     _cores = cpu_count()
-    _df = DataFrame()
+    _df = cudf.DataFrame()
     _exchange = "NYSE"
     _time_range = "years"
     _last_run = get_time(_exchange, to_string=True)
@@ -257,16 +145,12 @@ class AnalysisIndicators(BasePandasObject):
         self._last_run = get_time(self._exchange, to_string=True)
 
     @staticmethod
-    def _validate(obj: Tuple[pd.DataFrame, pd.Series]):
-        if not isinstance(obj, pd.DataFrame) and not isinstance(obj, pd.Series):
-            raise AttributeError("[X] Must be either a Pandas Series or DataFrame.")
+    def _validate(obj: Tuple[cudf.DataFrame, cudf.Series]):
+        if not isinstance(obj, cudf.DataFrame) and not isinstance(obj, cudf.Series):
+            raise AttributeError("[X] Must be either a CuDF Series or DataFrame.")
 
-    # DataFrame Behavioral Methods
-    def __call__(
-            self, kind: str = None,
-            timed: bool = False, version: bool = False, **kwargs
-        ):
-        if version: print(f"Pandas TA - Technical Analysis Indicators - v{self.version}")
+    def __call__(self, kind: str = None, timed: bool = False, version: bool = False, **kwargs):
+        if version: print(f"CuDF TA - Technical Analysis Indicators - v{self.version}")
         try:
             if isinstance(kind, str):
                 kind = kind.lower()
@@ -275,9 +159,8 @@ class AnalysisIndicators(BasePandasObject):
                 if timed:
                     stime = perf_counter()
 
-                # Run the indicator
-                result = fn(**kwargs)  # = getattr(self, kind)(**kwargs)
-                self._last_run = get_time(self.exchange, to_string=True) # Save when it completed it's run
+                result = fn(**kwargs)
+                self._last_run = get_time(self.exchange, to_string=True)
 
                 if timed:
                     result.timed = final_time(stime)
@@ -293,12 +176,10 @@ class AnalysisIndicators(BasePandasObject):
     # Public Get/Set DataFrame Properties
     @property
     def adjusted(self) -> str:
-        """property: df.ta.adjusted"""
         return self._adjusted
 
     @adjusted.setter
     def adjusted(self, value: str) -> None:
-        """property: df.ta.adjusted = 'adj_close'"""
         if value is not None and isinstance(value, str):
             self._adjusted = value
         else:
@@ -306,12 +187,10 @@ class AnalysisIndicators(BasePandasObject):
 
     @property
     def cores(self) -> str:
-        """Returns the categories."""
         return self._cores
 
     @cores.setter
     def cores(self, value: int) -> None:
-        """property: df.ta.cores = integer"""
         cpus = cpu_count()
         if value is not None and isinstance(value, int):
             self._cores = int(value) if 0 <= value <= cpus else cpus
@@ -320,47 +199,38 @@ class AnalysisIndicators(BasePandasObject):
 
     @property
     def exchange(self) -> str:
-        """Returns the current Exchange. Default: "NYSE"."""
         return self._exchange
 
     @exchange.setter
     def exchange(self, value: str) -> None:
-        """property: df.ta.exchange = "LSE" """
         if value is not None and isinstance(value, str) and value in EXCHANGE_TZ.keys():
             self._exchange = value
 
     @property
     def last_run(self) -> str:
-        """Returns the time when the DataFrame was last run."""
         return self._last_run
 
-    # Public Get DataFrame Properties
     @property
     def categories(self) -> str:
-        """Returns the categories."""
         return list(Category.keys())
 
     @property
     def datetime_ordered(self) -> bool:
-        """Returns True if the index is a datetime and ordered."""
         hasdf = hasattr(self, "_df")
         if hasdf:
             return is_datetime_ordered(self._df)
         return hasdf
 
     @property
-    def reverse(self) -> pd.DataFrame:
-        """Reverses the DataFrame. Simply: df.iloc[::-1]"""
+    def reverse(self) -> cudf.DataFrame:
         return self._df.iloc[::-1]
 
     @property
     def time_range(self) -> float:
-        """Returns the time ranges of the DataFrame as a float. Default is in "years". help(ta.toal_time)"""
         return total_time(self._df, self._time_range)
 
     @time_range.setter
     def time_range(self, value: str) -> None:
-        """property: df.ta.time_range = "years" (Default)"""
         if value is not None and isinstance(value, str):
             self._time_range = value
         else:
@@ -368,17 +238,14 @@ class AnalysisIndicators(BasePandasObject):
 
     @property
     def to_utc(self) -> None:
-        """Sets the DataFrame index to UTC format"""
         self._df = to_utc(self._df)
 
     @property
     def version(self) -> str:
-        """Returns the version."""
         return version
 
     # Private DataFrame Methods
     def _add_prefix_suffix(self, result=None, **kwargs) -> None:
-        """Add prefix and/or suffix to the result columns"""
         if result is None:
             return
         else:
@@ -390,24 +257,21 @@ class AnalysisIndicators(BasePandasObject):
             if "suffix" in kwargs:
                 suffix = f"{delimiter}{kwargs['suffix']}"
 
-            if isinstance(result, pd.Series):
+            if isinstance(result, cudf.Series):
                 result.name = prefix + result.name + suffix
             else:
                 result.columns = [prefix + column + suffix for column in result.columns]
 
     def _append(self, result=None, **kwargs) -> None:
-        """Appends a Pandas Series or DataFrame columns to self._df."""
         if "append" in kwargs and kwargs["append"]:
             df = self._df
             if df is None or result is None: return
             else:
-                simplefilter(action="ignore", category=pd.errors.PerformanceWarning)
+                simplefilter(action="ignore", category=UserWarning)
                 if "col_names" in kwargs and not isinstance(kwargs["col_names"], tuple):
-                    kwargs["col_names"] = (kwargs["col_names"],) # Note: tuple(kwargs["col_names"]) doesn't work
+                    kwargs["col_names"] = (kwargs["col_names"],)
 
-                if isinstance(result, pd.DataFrame):
-                    # If specified in kwargs, rename the columns.
-                    # If not, use the default names.
+                if isinstance(result, cudf.DataFrame):
                     if "col_names" in kwargs and isinstance(kwargs["col_names"], tuple):
                         if len(kwargs["col_names"]) >= len(result.columns):
                             for col, ind_name in zip(result.columns, kwargs["col_names"]):
@@ -426,41 +290,30 @@ class AnalysisIndicators(BasePandasObject):
                     df[ind_name] = result
 
     def _check_na_columns(self, stdout: bool = True):
-        """Returns the columns in which all it's values are na."""
-        return [x for x in self._df.columns if all(self._df[x].isna())]
+        return [x for x in self._df.columns if self._df[x].isna().sum() == len(self._df[x])]
 
     def _get_column(self, series):
-        """Attempts to get the correct series or 'column' and return it."""
         df = self._df
         if df is None: return
 
-        # Explicitly passing a pd.Series to override default.
-        if isinstance(series, pd.Series):
+        if isinstance(series, cudf.Series):
             return series
-        # Apply default if no series nor a default.
         elif series is None:
             return df[self.adjusted] if self.adjusted is not None else None
-        # Ok.  So it's a str.
         elif isinstance(series, str):
-            # Return the df column since it's in there.
             if series in df.columns:
                 return df[series]
             else:
-                # Attempt to match the 'series' because it was likely
-                # misspelled.
                 matches = df.columns.str.match(series, case=False)
                 match = [i for i, x in enumerate(matches) if x]
-                # If found, awesome.  Return it or return the 'series'.
                 cols = ", ".join(list(df.columns))
-                NOT_FOUND = f"[X] Ooops!!! It's {series not in df.columns}, the series '{series}' was not found in {cols}"
+                NOT_FOUND = f"[X] Ooops!!! The series '{series}' was not found in {cols}"
                 return df.iloc[:, match[0]] if len(match) else print(NOT_FOUND)
 
     def _indicators_by_category(self, name: str) -> list:
-        """Returns indicators by Categorical name."""
         return Category[name] if name in self.categories else None
 
     def _mp_worker(self, arguments: tuple):
-        """Multiprocessing Worker to handle different Methods."""
         method, args, kwargs = arguments
 
         if method != "ichimoku":
@@ -468,30 +321,22 @@ class AnalysisIndicators(BasePandasObject):
         else:
             return getattr(self, method)(*args, **kwargs)[0]
 
-    def _post_process(self, result, **kwargs) -> Tuple[pd.Series, pd.DataFrame]:
-        """Applies any additional modifications to the DataFrame
-        * Applies prefixes and/or suffixes
-        * Appends the result to main DataFrame
-        """
+    def _post_process(self, result, **kwargs) -> Tuple[cudf.Series, cudf.DataFrame]:
         verbose = kwargs.pop("verbose", False)
-        if not isinstance(result, (pd.Series, pd.DataFrame)):
+        if not isinstance(result, (cudf.Series, cudf.DataFrame)):
             if verbose:
                 print(f"[X] Oops! The result was not a Series or DataFrame.")
             return self._df
         else:
-            # Append only specific columns to the dataframe (via
-            # 'col_numbers':(0,1,3) for example)
             result = (result.iloc[:, [int(n) for n in kwargs["col_numbers"]]]
-                      if isinstance(result, pd.DataFrame) and
+                      if isinstance(result, cudf.DataFrame) and
                       "col_numbers" in kwargs and
                       kwargs["col_numbers"] is not None else result)
-            # Add prefix/suffix and append to the dataframe
             self._add_prefix_suffix(result=result, **kwargs)
             self._append(result=result, **kwargs)
         return result
 
     def _strategy_mode(self, *args) -> tuple:
-        """Helper method to determine the mode and name of the strategy. Returns tuple: (name:str, mode:dict)"""
         name = "All"
         mode = {"all": False, "category": False, "custom": False}
 
@@ -515,37 +360,8 @@ class AnalysisIndicators(BasePandasObject):
 
         return name, mode
 
-    # Public DataFrame Methods
     def constants(self, append: bool, values: list):
-        """Constants
-
-        Add or remove constants to the DataFrame easily with Numpy's arrays or
-        lists. Useful when you need easily accessible horizontal lines for
-        charting.
-
-        Add constant '1' to the DataFrame
-        >>> df.ta.constants(True, [1])
-        Remove constant '1' to the DataFrame
-        >>> df.ta.constants(False, [1])
-
-        Adding constants for charting
-        >>> import numpy as np
-        >>> chart_lines = np.append(np.arange(-4, 5, 1), np.arange(-100, 110, 10))
-        >>> df.ta.constants(True, chart_lines)
-        Removing some constants from the DataFrame
-        >>> df.ta.constants(False, np.array([-60, -40, 40, 60]))
-
-        Args:
-            append (bool): If True, appends a Numpy range of constants to the
-                working DataFrame.  If False, it removes the constant range from
-                the working DataFrame. Default: None.
-
-        Returns:
-            Returns the appended constants
-            Returns nothing to the user.  Either adds or removes constant ranges
-            from the working DataFrame.
-        """
-        if isinstance(values, npNdarray) or isinstance(values, list):
+        if isinstance(values, list) or isinstance(values, cp.ndarray):
             if append:
                 for x in values:
                     self._df[f"{x}"] = x
@@ -555,21 +371,8 @@ class AnalysisIndicators(BasePandasObject):
                     del self._df[f"{x}"]
 
     def indicators(self, **kwargs):
-        """List of Indicators
-
-        kwargs:
-            as_list (bool, optional): When True, it returns a list of the
-                indicators. Default: False.
-            exclude (list, optional): The passed in list will be excluded
-                from the indicators list. Default: None.
-
-        Returns:
-            Prints the list of indicators. If as_list=True, then a list.
-        """
         as_list = kwargs.setdefault("as_list", False)
-        # Public non-indicator methods
         helper_methods = ["constants", "indicators", "strategy"]
-        # Public df.ta.properties
         ta_properties = [
             "adjusted",
             "categories",
@@ -584,26 +387,21 @@ class AnalysisIndicators(BasePandasObject):
             "version",
         ]
 
-        # Public non-indicator methods
-        ta_indicators = list((x for x in dir(pd.DataFrame().ta) if not x.startswith("_") and not x.endswith("_")))
+        ta_indicators = list((x for x in dir(cudf.DataFrame().ta) if not x.startswith("_") and not x.endswith("_")))
 
-        # Add Pandas TA methods and properties to be removed
         removed = helper_methods + ta_properties
 
-        # Add user excluded methods to be removed
         user_excluded = kwargs.setdefault("exclude", [])
         if isinstance(user_excluded, list) and len(user_excluded) > 0:
             removed += user_excluded
 
-        # Remove the unwanted indicators
         [ta_indicators.remove(x) for x in removed]
 
-        # If as a list, immediately return
         if as_list:
             return ta_indicators
 
         total_indicators = len(ta_indicators)
-        header = f"Pandas TA - Technical Analysis Indicators - v{self.version}"
+        header = f"CuDF TA - Technical Analysis Indicators - v{self.version}"
         s = f"{header}\nTotal Indicators & Utilities: {total_indicators + len(ALL_PATTERNS)}\n"
         if total_indicators > 0:
             print(f"{s}Abbreviations:\n    {', '.join(ta_indicators)}\n\nCandle Patterns:\n    {', '.join(ALL_PATTERNS)}")
@@ -611,38 +409,11 @@ class AnalysisIndicators(BasePandasObject):
             print(s)
 
     def strategy(self, *args, **kwargs):
-        """Strategy Method
-
-        An experimental method that by default runs all applicable indicators.
-        Future implementations will allow more specific indicator generation
-        with possibly as json, yaml config file or an sqlite3 table.
-
-
-        Kwargs:
-            chunksize (bool): Adjust the chunksize for the Multiprocessing Pool.
-                Default: Number of cores of the OS
-            exclude (list): List of indicator names to exclude. Some are
-                excluded by default for various reasons; they require additional
-                sources, performance (td_seq), not a ohlcv chart (vp) etc.
-            name (str): Select all indicators or indicators by
-                Category such as: "candles", "cycles", "momentum", "overlap",
-                "performance", "statistics", "trend", "volatility", "volume", or
-                "all". Default: "all"
-            ordered (bool): Whether to run "all" in order. Default: True
-            timed (bool): Show the process time of the strategy().
-                Default: False
-            verbose (bool): Provide some additional insight on the progress of
-                the strategy() execution. Default: False
-        """
-        # If True, it returns the resultant DataFrame. Default: False
         returns = kwargs.pop("returns", False)
-        # cpus = cpu_count()
-        # Ensure indicators are appended to the DataFrame
         kwargs["append"] = True
         all_ordered = kwargs.pop("ordered", True)
         mp_chunksize = kwargs.pop("chunksize", self.cores)
 
-        # Initialize
         initial_column_count = len(self._df.columns)
         excluded = [
             "above",
@@ -651,24 +422,20 @@ class AnalysisIndicators(BasePandasObject):
             "below_value",
             "cross",
             "cross_value",
-            # "data", # reserved
             "long_run",
             "short_run",
-            "td_seq", # Performance exclusion
+            "td_seq",
             "tsignals",
             "vp",
             "xsignals",
         ]
 
-        # Get the Strategy Name and mode
         name, mode = self._strategy_mode(*args)
 
-        # If All or a Category, exclude user list if any
         user_excluded = kwargs.pop("exclude", [])
         if mode["all"] or mode["category"]:
             excluded += user_excluded
 
-        # Collect the indicators, remove excluded or include kwarg["append"]
         if mode["category"]:
             ta = self._indicators_by_category(name.lower())
             [ta.remove(x) for x in excluded if x in ta]
@@ -682,8 +449,6 @@ class AnalysisIndicators(BasePandasObject):
             print(f"[X] Not an available strategy.")
             return None
 
-        # Remove Custom indicators with "length" keyword when larger than the DataFrame
-        # Possible to have other indicator main window lengths to be included
         removal = []
         for kwds in ta:
             _ = False
@@ -707,7 +472,6 @@ class AnalysisIndicators(BasePandasObject):
             stime = perf_counter()
 
         if use_multiprocessing and mode["custom"]:
-            # Determine if the Custom Model has 'col_names' parameter
             has_col_names = (True if len([
                 True for x in ta
                 if "col_names" in x and isinstance(x["col_names"], tuple)
@@ -717,41 +481,38 @@ class AnalysisIndicators(BasePandasObject):
                 use_multiprocessing = False
 
         if Imports["tqdm"]:
-            # from tqdm import tqdm
             from tqdm import tqdm
 
         if use_multiprocessing:
             _total_ta = len(ta)
             with Pool(self.cores) as pool:
-                # Some magic to optimize chunksize for speed based on total ta indicators
+
                 _chunksize = mp_chunksize - 1 if mp_chunksize > _total_ta else int(npLog10(_total_ta)) + 1
                 if verbose:
                     print(f"[i] Multiprocessing {_total_ta} indicators with {_chunksize} chunks and {self.cores}/{cpu_count()} cpus.")
 
                 results = None
                 if mode["custom"]:
-                    # Create a list of all the custom indicators into a list
                     custom_ta = [(
                         ind["kind"],
                         ind["params"] if "params" in ind and isinstance(ind["params"], tuple) else (),
                         {**ind, **kwargs},
                     ) for ind in ta]
-                    # Custom multiprocessing pool. Must be ordered for Chained Strategies
-                    # May fix this to cpus if Chaining/Composition if it remains
+
                     results = pool.imap(self._mp_worker, custom_ta, _chunksize)
                 else:
                     default_ta = [(ind, tuple(), kwargs) for ind in ta]
-                    # All and Categorical multiprocessing pool.
+
                     if all_ordered:
                         if Imports["tqdm"]:
-                            results = tqdm(pool.imap(self._mp_worker, default_ta, _chunksize)) # Order over Speed
+                            results = tqdm(pool.imap(self._mp_worker, default_ta, _chunksize))
                         else:
-                            results = pool.imap(self._mp_worker, default_ta, _chunksize) # Order over Speed
+                            results = pool.imap(self._mp_worker, default_ta, _chunksize)
                     else:
                         if Imports["tqdm"]:
-                            results = tqdm(pool.imap_unordered(self._mp_worker, default_ta, _chunksize)) # Speed over Order
+                            results = tqdm(pool.imap_unordered(self._mp_worker, default_ta, _chunksize))
                         else:
-                            results = pool.imap_unordered(self._mp_worker, default_ta, _chunksize) # Speed over Order
+                            results = pool.imap_unordered(self._mp_worker, default_ta, _chunksize)
                 if results is None:
                     print(f"[X] ta.strategy('{name}') has no results.")
                     return
@@ -761,7 +522,6 @@ class AnalysisIndicators(BasePandasObject):
                 self._last_run = get_time(self.exchange, to_string=True)
 
         else:
-            # Without multiprocessing:
             if verbose:
                 _col_msg = f"[i] No mulitproccessing (cores = 0)."
                 if has_col_names:
@@ -788,7 +548,6 @@ class AnalysisIndicators(BasePandasObject):
                         getattr(self, ind)(*tuple(), **kwargs)
                 self._last_run = get_time(self.exchange, to_string=True)
 
-        # Apply prefixes/suffixes and appends indicator results to the  DataFrame
         [self._post_process(r, **kwargs) for r in results]
 
         if verbose:
@@ -802,52 +561,10 @@ class AnalysisIndicators(BasePandasObject):
 
 
     def ticker(self, ticker: str, **kwargs):
-        """ticker
-
-        This method downloads Historical Data if the package yfinance is installed.
-        Additionally it can run a ta.Strategy; Builtin or Custom. It returns a
-        DataFrame if there the DataFrame is not empty, otherwise it exits. For
-        additional yfinance arguments, use help(ta.yf).
-
-        Historical Data
-        >>> df = df.ta.ticker("aapl")
-        More specifically
-        >>> df = df.ta.ticker("aapl", period="max", interval="1d", kind=None)
-
-        Changing the period of Historical Data
-        Period is used instead of start/end
-        >>> df = df.ta.ticker("aapl", period="1y")
-
-        Changing the period and interval of Historical Data
-        Retrieves the past year in weeks
-        >>> df = df.ta.ticker("aapl", period="1y", interval="1wk")
-        Retrieves the past month in hours
-        >>> df = df.ta.ticker("aapl", period="1mo", interval="1h")
-
-        Show everything
-        >>> df = df.ta.ticker("aapl", kind="all")
-
-        Args:
-            ticker (str): Any string for a ticker you would use with yfinance.
-                Default: "SPY"
-        Kwargs:
-            kind (str): Options see above. Default: "history"
-            ds (str): Data Source to use. Default: "yahoo"
-            strategy (str | ta.Strategy): Which strategy to apply after
-                downloading chart history. Default: None
-
-            See help(ta.yf) for additional kwargs
-
-        Returns:
-            Exits if the DataFrame is empty or None
-            Otherwise it returns a DataFrame
-        """
         ds = kwargs.pop("ds", "yahoo")
         strategy = kwargs.pop("strategy", None)
 
-        # Fetch the Data
         ds = ds.lower() is not None and isinstance(ds, str)
-        # df = av(ticker, **kwargs) if ds and ds == "av" else yf(ticker, **kwargs)
         df = yf(ticker, **kwargs)
 
         if df is None: return
@@ -864,8 +581,6 @@ class AnalysisIndicators(BasePandasObject):
         return df
 
 
-    # Public DataFrame Methods: Indicators and Utilities
-    # Candles
     def cdl_pattern(self, name="all", offset=None, **kwargs):
         open_ = self._get_column(kwargs.pop("open", "open"))
         high = self._get_column(kwargs.pop("high", "high"))
@@ -890,13 +605,11 @@ class AnalysisIndicators(BasePandasObject):
         result = ha(open_=open_, high=high, low=low, close=close, offset=offset, **kwargs)
         return self._post_process(result, **kwargs)
 
-    # Cycles
     def ebsw(self, close=None, length=None, bars=None, offset=None, **kwargs):
         close = self._get_column(kwargs.pop("close", "close"))
         result = ebsw(close=close, length=length, bars=bars, offset=offset, **kwargs)
         return self._post_process(result, **kwargs)
 
-    # Momentum
     def ao(self, fast=None, slow=None, offset=None, **kwargs):
         high = self._get_column(kwargs.pop("high", "high"))
         low = self._get_column(kwargs.pop("low", "low"))
@@ -1031,9 +744,7 @@ class AnalysisIndicators(BasePandasObject):
         return self._post_process(result, **kwargs)
 
     def psl(self, open_=None, length=None, scalar=None, drift=None, offset=None, **kwargs):
-        if open_ is not None:
-            open_ = self._get_column(kwargs.pop("open", "open"))
-
+        open_ = self._get_column(kwargs.pop("open", "open"))
         close = self._get_column(kwargs.pop("close", "close"))
         result = psl(close=close, open_=open_, length=length, scalar=scalar, drift=drift, offset=offset, **kwargs)
         return self._post_process(result, **kwargs)
@@ -1143,7 +854,6 @@ class AnalysisIndicators(BasePandasObject):
         result = willr(high=high, low=low, close=close, length=length, percentage=percentage, offset=offset, **kwargs)
         return self._post_process(result, **kwargs)
 
-    # Overlap
     def alma(self, length=None, sigma=None, distribution_offset=None, offset=None, **kwargs):
         close = self._get_column(kwargs.pop("close", "close"))
         result = alma(close=close, length=length, sigma=sigma, distribution_offset=distribution_offset, offset=offset, **kwargs)
@@ -1212,7 +922,6 @@ class AnalysisIndicators(BasePandasObject):
         self._add_prefix_suffix(result, **kwargs)
         self._add_prefix_suffix(span, **kwargs)
         self._append(result, **kwargs)
-        # return self._post_process(result, **kwargs), span
         return result, span
 
     def linreg(self, length=None, offset=None, adjust=None, **kwargs):
@@ -1336,7 +1045,6 @@ class AnalysisIndicators(BasePandasObject):
         result = zlma(close=close, length=length, mamode=mamode, offset=offset, **kwargs)
         return self._post_process(result, **kwargs)
 
-    # Performance
     def log_return(self, length=None, cumulative=False, percent=False, offset=None, **kwargs):
         close = self._get_column(kwargs.pop("close", "close"))
         result = log_return(close=close, length=length, cumulative=cumulative, percent=percent, offset=offset, **kwargs)
@@ -1347,7 +1055,6 @@ class AnalysisIndicators(BasePandasObject):
         result = percent_return(close=close, length=length, cumulative=cumulative, percent=percent, offset=offset, **kwargs)
         return self._post_process(result, **kwargs)
 
-    # Statistics
     def entropy(self, length=None, base=None, offset=None, **kwargs):
         close = self._get_column(kwargs.pop("close", "close"))
         result = entropy(close=close, length=length, base=base, offset=offset, **kwargs)
@@ -1398,7 +1105,6 @@ class AnalysisIndicators(BasePandasObject):
         result = zscore(close=close, length=length, std=std, offset=offset, **kwargs)
         return self._post_process(result, **kwargs)
 
-    # Trend
     def adx(self, length=None, lensig=None, mamode=None, scalar=None, drift=None, offset=None, **kwargs):
         high = self._get_column(kwargs.pop("high", "high"))
         low = self._get_column(kwargs.pop("low", "low"))
@@ -1518,7 +1224,6 @@ class AnalysisIndicators(BasePandasObject):
             result = xsignals(signal=signal, xa=xa, xb=xb, above=above, long=long, asbool=asbool, trend_offset=trend_offset, trend_reset=trend_reset, offset=offset, **kwargs)
             return self._post_process(result, **kwargs)
 
-    # Utility
     def above(self, asint=True, offset=None, **kwargs):
         a = self._get_column(kwargs.pop("close", "a"))
         b = self._get_column(kwargs.pop("close", "b"))
@@ -1549,11 +1254,9 @@ class AnalysisIndicators(BasePandasObject):
 
     def cross_value(self, value=None, above=True, asint=True, offset=None, **kwargs):
         a = self._get_column(kwargs.pop("close", "a"))
-        # a = self._get_column(a, f"{a}")
         result = cross_value(series_a=a, value=value, above=above, asint=asint, offset=offset, **kwargs)
         return self._post_process(result, **kwargs)
 
-    # Volatility
     def aberration(self, length=None, atr_length=None, offset=None, **kwargs):
         high = self._get_column(kwargs.pop("high", "high"))
         low = self._get_column(kwargs.pop("low", "low"))
@@ -1644,10 +1347,8 @@ class AnalysisIndicators(BasePandasObject):
         result = ui(close=close, length=length, scalar=scalar, offset=offset, **kwargs)
         return self._post_process(result, **kwargs)
 
-    # Volume
     def ad(self, open_=None, signed=True, offset=None, **kwargs):
-        if open_ is not None:
-            open_ = self._get_column(kwargs.pop("open", "open"))
+        open_ = self._get_column(kwargs.pop("open", "open"))
         high = self._get_column(kwargs.pop("high", "high"))
         low = self._get_column(kwargs.pop("low", "low"))
         close = self._get_column(kwargs.pop("close", "close"))
@@ -1656,99 +1357,9 @@ class AnalysisIndicators(BasePandasObject):
         return self._post_process(result, **kwargs)
 
     def adosc(self, open_=None, fast=None, slow=None, signed=True, offset=None, **kwargs):
-        if open_ is not None:
-            open_ = self._get_column(kwargs.pop("open", "open"))
+        open_ = self._get_column(kwargs.pop("open", "open"))
         high = self._get_column(kwargs.pop("high", "high"))
         low = self._get_column(kwargs.pop("low", "low"))
         close = self._get_column(kwargs.pop("close", "close"))
         volume = self._get_column(kwargs.pop("volume", "volume"))
-        result = adosc(high=high, low=low, close=close, volume=volume, open_=open_, fast=fast, slow=slow, signed=signed, offset=offset, **kwargs)
-        return self._post_process(result, **kwargs)
-
-    def aobv(self, fast=None, slow=None, mamode=None, max_lookback=None, min_lookback=None, offset=None, **kwargs):
-        close = self._get_column(kwargs.pop("close", "close"))
-        volume = self._get_column(kwargs.pop("volume", "volume"))
-        result = aobv(close=close, volume=volume, fast=fast, slow=slow, mamode=mamode, max_lookback=max_lookback, min_lookback=min_lookback, offset=offset, **kwargs)
-        return self._post_process(result, **kwargs)
-
-    def cmf(self, open_=None, length=None, offset=None, **kwargs):
-        if open_ is not None:
-            open_ = self._get_column(kwargs.pop("open", "open"))
-        high = self._get_column(kwargs.pop("high", "high"))
-        low = self._get_column(kwargs.pop("low", "low"))
-        close = self._get_column(kwargs.pop("close", "close"))
-        volume = self._get_column(kwargs.pop("volume", "volume"))
-        result = cmf(high=high, low=low, close=close, volume=volume, open_=open_, length=length, offset=offset, **kwargs)
-        return self._post_process(result, **kwargs)
-
-    def efi(self, length=None, mamode=None, offset=None, drift=None, **kwargs):
-        close = self._get_column(kwargs.pop("close", "close"))
-        volume = self._get_column(kwargs.pop("volume", "volume"))
-        result = efi(close=close, volume=volume, length=length, offset=offset, mamode=mamode, drift=drift, **kwargs)
-        return self._post_process(result, **kwargs)
-
-    def eom(self, length=None, divisor=None, offset=None, drift=None, **kwargs):
-        high = self._get_column(kwargs.pop("high", "high"))
-        low = self._get_column(kwargs.pop("low", "low"))
-        close = self._get_column(kwargs.pop("close", "close"))
-        volume = self._get_column(kwargs.pop("volume", "volume"))
-        result = eom(high=high, low=low, close=close, volume=volume, length=length, divisor=divisor, offset=offset, drift=drift, **kwargs)
-        return self._post_process(result, **kwargs)
-
-    def kvo(self, fast=None, slow=None, length_sig=None, mamode=None, offset=None, drift=None, **kwargs):
-        high = self._get_column(kwargs.pop("high", "high"))
-        low = self._get_column(kwargs.pop("low", "low"))
-        close = self._get_column(kwargs.pop("close", "close"))
-        volume = self._get_column(kwargs.pop("volume", "volume"))
-        result = kvo(high=high, low=low, close=close, volume=volume, fast=fast, slow=slow, length_sig=length_sig, mamode=mamode, offset=offset, drift=drift, **kwargs)
-        return self._post_process(result, **kwargs)
-
-    def mfi(self, length=None, drift=None, offset=None, **kwargs):
-        high = self._get_column(kwargs.pop("high", "high"))
-        low = self._get_column(kwargs.pop("low", "low"))
-        close = self._get_column(kwargs.pop("close", "close"))
-        volume = self._get_column(kwargs.pop("volume", "volume"))
-        result = mfi(high=high, low=low, close=close, volume=volume, length=length, drift=drift, offset=offset, **kwargs)
-        return self._post_process(result, **kwargs)
-
-    def nvi(self, length=None, initial=None, signed=True, offset=None, **kwargs):
-        close = self._get_column(kwargs.pop("close", "close"))
-        volume = self._get_column(kwargs.pop("volume", "volume"))
-        result = nvi(close=close, volume=volume, length=length, initial=initial, signed=signed, offset=offset, **kwargs)
-        return self._post_process(result, **kwargs)
-
-    def obv(self, offset=None, **kwargs):
-        close = self._get_column(kwargs.pop("close", "close"))
-        volume = self._get_column(kwargs.pop("volume", "volume"))
-        result = obv(close=close, volume=volume, offset=offset, **kwargs)
-        return self._post_process(result, **kwargs)
-
-    def pvi(self, length=None, initial=None, signed=True, offset=None, **kwargs):
-        close = self._get_column(kwargs.pop("close", "close"))
-        volume = self._get_column(kwargs.pop("volume", "volume"))
-        result = pvi(close=close, volume=volume, length=length, initial=initial, signed=signed, offset=offset, **kwargs)
-        return self._post_process(result, **kwargs)
-
-    def pvol(self, volume=None, offset=None, **kwargs):
-        close = self._get_column(kwargs.pop("close", "close"))
-        volume = self._get_column(kwargs.pop("volume", "volume"))
-        result = pvol(close=close, volume=volume, offset=offset, **kwargs)
-        return self._post_process(result, **kwargs)
-
-    def pvr(self, **kwargs):
-        close = self._get_column(kwargs.pop("close", "close"))
-        volume = self._get_column(kwargs.pop("volume", "volume"))
-        result = pvr(close=close, volume=volume)
-        return self._post_process(result, **kwargs)
-
-    def pvt(self, offset=None, **kwargs):
-        close = self._get_column(kwargs.pop("close", "close"))
-        volume = self._get_column(kwargs.pop("volume", "volume"))
-        result = pvt(close=close, volume=volume, offset=offset, **kwargs)
-        return self._post_process(result, **kwargs)
-
-    def vp(self, width=None, percent=None, **kwargs):
-        close = self._get_column(kwargs.pop("close", "close"))
-        volume = self._get_column(kwargs.pop("volume", "volume"))
-        result = vp(close=close, volume=volume, width=width, percent=percent, **kwargs)
-        return self._post_process(result, **kwargs)
+        result = adosc(high=high, low

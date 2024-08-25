@@ -1,7 +1,59 @@
+```python
 # -*- coding: utf-8 -*-
-from pandas import DataFrame, Series
-from pandas_ta.overlap import ema
-from pandas_ta.utils import get_offset, non_zero_range, verify_series
+from cudf import DataFrame, Series
+from cudf.core.series import Series as verify_series
+import cupy as cp
+from numba import cuda
+
+# CUDA kernel function to speed up Schaff Trend Cycle calculations
+@cuda.jit
+def schaff_tc_kernel(xmacd, lowest_xmacd, xmacd_range, factor, pf, m):
+    stoch1 = cuda.local.array(1024, dtype=cp.float32)
+    stoch2 = cuda.local.array(1024, dtype=cp.float32)
+    pff = cuda.local.array(1024, dtype=cp.float32)
+
+    i = cuda.grid(1)
+    if i < m:
+        stoch1[0], pf[0] = 0.0, 0.0
+        lowest_pf = pf.rolling(tclength).min()
+        pf_range = non_zero_range(pf.rolling(tclength).max(), lowest_pf)
+
+        if lowest_xmacd[i] > 0:
+            stoch1[i] = 100 * ((xmacd[i] - lowest_xmacd[i]) / xmacd_range[i])
+        else:
+            stoch1[i] = stoch1[i - 1]
+
+        pf[i] = pf[i - 1] + factor * (stoch1[i] - pf[i - 1])
+        pf[i] = round(pf[i], 8)
+
+        if pf_range[i] > 0:
+            stoch2[i] = 100 * ((pf[i] - lowest_pf[i]) / pf_range[i])
+        else:
+            stoch2[i] = stoch2[i - 1]
+
+        pff[i] = pff[i - 1] + factor * (stoch2[i] - pff[i - 1])
+        pff[i] = round(pff[i], 8)
+
+@cuda.jit    
+def schaff_tc(close, xmacd, tclength, factor):
+    m = len(xmacd)
+    pf = cp.zeros(m, dtype=cp.float32)
+    lowest_xmacd = xmacd.rolling(tclength).min()
+    xmacd_range = non_zero_range(xmacd.rolling(tclength).max(), lowest_xmacd)
+
+    # Allocate on GPU and execute kernel
+    schaff_tc_kernel[1, m](xmacd, lowest_xmacd, xmacd_range, cp.float32(factor), pf, m)
+    
+    pf = Series(pf, index=close.index)
+ 
+    # Calculate 2nd Stochastic
+    pff = cp.zeros(m, dtype=cp.float32)
+    lowest_pf = pf.rolling(tclength).min()
+    pf_range = non_zero_range(pf.rolling(tclength).max(), lowest_pf)
+
+    schaff_tc_kernel[1, m](pf, lowest_pf, pf_range, cp.float32(factor), pff, m)
+
+    return [pff, pf]
 
 
 def stc(close, tclength=None, fast=None, slow=None, factor=None, offset=None, **kwargs):
@@ -90,94 +142,4 @@ def stc(close, tclength=None, fast=None, slow=None, factor=None, offset=None, **
     df.category = stc.category
 
     return df
-
-
-stc.__doc__ = \
-"""Schaff Trend Cycle (STC)
-
-The Schaff Trend Cycle is an evolution of the popular MACD incorportating two
-cascaded stochastic calculations with additional smoothing.
-
-The STC returns also the beginning MACD result as well as the result after the
-first stochastic including its smoothing. This implementation has been extended
-for Pandas TA to also allow for separatly feeding any other two moving Averages
-(as ma1 and ma2) or to skip this to feed an oscillator (osc), based on which the
-Schaff Trend Cycle should be calculated.
-
-Feed external moving averages:
-Internally calculation..
-    stc = ta.stc(close=df["close"], tclen=stc_tclen, fast=ma1_interval, slow=ma2_interval, factor=stc_factor)
-becomes..
-    extMa1 = df.ta.zlma(close=df["close"], length=ma1_interval, append=True)
-    extMa2 = df.ta.ema(close=df["close"], length=ma2_interval, append=True)
-    stc = ta.stc(close=df["close"], tclen=stc_tclen, ma1=extMa1, ma2=extMa2, factor=stc_factor)
-
-The same goes for osc=, which allows the input of an externally calculated oscillator, overriding ma1 & ma2.
-
-
-Sources:
-    Implemented by rengel8 based on work found here:
-    https://www.prorealcode.com/prorealtime-indicators/schaff-trend-cycle2/
-
-Calculation:
-    STCmacd = Moving Average Convergance/Divergance or Oscillator
-    STCstoch = Intermediate Stochastic of MACD/Osc.
-    2nd Stochastic including filtering with results in the
-    STC = Schaff Trend Cycle
-
-Args:
-    close (pd.Series): Series of 'close's, used for indexing Series, mandatory
-    tclen (int): SchaffTC Signal-Line length.  Default: 10 (adjust to the half of cycle)
-    fast (int): The short period.   Default: 12
-    slow (int): The long period.   Default: 26
-    factor (float): smoothing factor for last stoch. calculation.   Default: 0.5
-    offset (int): How many periods to offset the result.  Default: 0
-
-Kwargs:
-    ma1: 1st moving average provided externally (mandatory in conjuction with ma2)
-    ma2: 2nd moving average provided externally (mandatory in conjuction with ma1)
-    osc: an externally feeded osillator
-    fillna (value, optional): pd.DataFrame.fillna(value)
-    fill_method (value, optional): Type of fill method
-
-Returns:
-    pd.DataFrame: stc, macd, stoch
-"""
-
-
-def schaff_tc(close, xmacd, tclength, factor):
-    # ACTUAL Calculation part, which is shared between operation modes
-    # 1St : Stochastic of MACD
-    lowest_xmacd = xmacd.rolling(tclength).min()  # min value in interval tclen
-    xmacd_range = non_zero_range(xmacd.rolling(tclength).max(), lowest_xmacd)
-    m = len(xmacd)
-
-    # %Fast K of MACD
-    stoch1, pf = list(xmacd), list(xmacd)
-    stoch1[0], pf[0] = 0, 0
-    for i in range(1, m):
-        if lowest_xmacd[i] > 0:
-            stoch1[i] = 100 * ((xmacd[i] - lowest_xmacd[i]) / xmacd_range[i])
-        else:
-            stoch1[i] = stoch1[i - 1]
-        # Smoothed Calculation for % Fast D of MACD
-        pf[i] = round(pf[i - 1] + (factor * (stoch1[i] - pf[i - 1])), 8)
-
-    pf = Series(pf, index=close.index)
-
-    # 2nd : Stochastic of smoothed Percent Fast D, 'PF', above
-    lowest_pf = pf.rolling(tclength).min()
-    pf_range = non_zero_range(pf.rolling(tclength).max(), lowest_pf)
-
-    # % of Fast K of PF
-    stoch2, pff = list(xmacd), list(xmacd)
-    stoch2[0], pff[0] = 0, 0
-    for i in range(1, m):
-        if pf_range[i] > 0:
-            stoch2[i] = 100 * ((pf[i] - lowest_pf[i]) / pf_range[i])
-        else:
-            stoch2[i] = stoch2[i - 1]
-        # Smoothed Calculation for % Fast D of PF
-        pff[i] = round(pff[i - 1] + (factor * (stoch2[i] - pff[i - 1])), 8)
-
-    return [pff, pf]
+```

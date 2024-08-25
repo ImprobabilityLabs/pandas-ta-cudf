@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
+import cudf
 from .mom import mom
 from pandas_ta import Imports
 from pandas_ta.utils import get_offset, verify_series
-
 
 def roc(close, length=None, scalar=None, talib=None, offset=None, **kwargs):
     """Indicator: Rate of Change (ROC)"""
     # Validate Arguments
     length = int(length) if length and length > 0 else 10
     scalar = float(scalar) if scalar and scalar > 0 else 100
-    close = verify_series(close, length)
+    close = cudf.Series(verify_series(close, length))
     offset = get_offset(offset)
     mode_tal = bool(talib) if isinstance(talib, bool) else True
 
@@ -18,9 +18,10 @@ def roc(close, length=None, scalar=None, talib=None, offset=None, **kwargs):
     # Calculate Result
     if Imports["talib"] and mode_tal:
         from talib import ROC
-        roc = ROC(close, length)
+        roc = cudf.Series(ROC(close.to_pandas(), length))
     else:
-        roc = scalar * mom(close=close, length=length) / close.shift(length)
+        mom_val = mom(close=close, length=length)
+        roc = scalar * mom_val / close.shift(length)
 
     # Offset
     if offset != 0:
@@ -56,7 +57,7 @@ Calculation:
     ROC = 100 * MOM(close, length) / close.shift(length)
 
 Args:
-    close (pd.Series): Series of 'close's
+    close (pd.Series or cudf.Series): Series of 'close's
     length (int): It's period. Default: 1
     scalar (float): How much to magnify. Default: 100
     talib (bool): If TA Lib is installed and talib is True, Returns the TA Lib
@@ -68,5 +69,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cudf.Series: New feature generated.
 """

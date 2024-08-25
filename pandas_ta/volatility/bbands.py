@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
-from pandas import DataFrame
+from cudf import DataFrame
 from pandas_ta import Imports
 from pandas_ta.overlap import ma
 from pandas_ta.statistics import stdev
 from pandas_ta.utils import get_offset, non_zero_range, tal_ma, verify_series
-
 
 def bbands(close, length=None, std=None, ddof=0, mamode=None, talib=None, offset=None, **kwargs):
     """Indicator: Bollinger Bands (BBANDS)"""
@@ -77,7 +75,6 @@ def bbands(close, length=None, std=None, ddof=0, mamode=None, talib=None, offset
     bbandsdf.category = mid.category
 
     return bbandsdf
-
 
 bbands.__doc__ = \
 """Bollinger Bands (BBANDS)

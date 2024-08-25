@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import cudf
 from .aberration import aberration
 from .accbands import accbands
 from .atr import atr

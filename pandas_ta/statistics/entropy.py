@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
+import cudf
+from cuml.statistics import entropy as cuEntropy
 from numpy import log as npLog
 from pandas_ta.utils import get_offset, verify_series
-
 
 def entropy(close, length=None, base=None, offset=None, **kwargs):
     """Indicator: Entropy (ENTP)"""
@@ -13,9 +14,15 @@ def entropy(close, length=None, base=None, offset=None, **kwargs):
 
     if close is None: return
 
+    # Convert to CuDF
+    close_cu = cudf.Series(close)
+
     # Calculate Result
-    p = close / close.rolling(length).sum()
-    entropy = (-p * npLog(p) / npLog(base)).rolling(length).sum()
+    p = close_cu / close_cu.rolling(length).sum()
+    entropy_cu = (-p * npLog(p) / npLog(base)).rolling(length).sum()
+
+    # Convert back to pandas
+    entropy = entropy_cu.to_pandas()
 
     # Offset
     if offset != 0:

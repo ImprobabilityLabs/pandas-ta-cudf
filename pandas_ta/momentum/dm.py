@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-from pandas import DataFrame
-from pandas_ta import Imports
-from pandas_ta.overlap import ma
-from pandas_ta.utils import get_offset, verify_series, get_drift, zero
+import cudf
+from cudf.ta import Imports
+from cudf.ta.overlap import ma
+from cudf.ta.utils import get_offset, verify_series, get_drift, zero
 
 
 def dm(high, low, length=None, mamode=None, talib=None, drift=None, offset=None, **kwargs):
@@ -48,7 +48,7 @@ def dm(high, low, length=None, mamode=None, talib=None, drift=None, offset=None,
         f"DMN{_params}": neg,
     }
 
-    dmdf = DataFrame(data)
+    dmdf = cudf.DataFrame(data)
     # print(dmdf.head(20))
     # print()
     dmdf.name = f"DM{_params}"

@@ -1,31 +1,32 @@
 # -*- coding: utf-8 -*-
-from numpy import nan as npNaN
-from pandas import concat
-from pandas_ta import Imports
+import cudf
+from cudf.core.column import numeric
+from cudf.core.series import Series
+from cuml.utils.import_utils import has_cuml
 from pandas_ta.utils import get_drift, get_offset, non_zero_range, verify_series
-
+import numpy as np
 
 def true_range(high, low, close, talib=None, drift=None, offset=None, **kwargs):
     """Indicator: True Range"""
     # Validate arguments
-    high = verify_series(high)
-    low = verify_series(low)
-    close = verify_series(close)
+    high = cudf.Series(high) if isinstance(high, list) else high
+    low = cudf.Series(low) if isinstance(low, list) else low
+    close = cudf.Series(close) if isinstance(close, list) else close
     drift = get_drift(drift)
     offset = get_offset(offset)
     mode_tal = bool(talib) if isinstance(talib, bool) else True
 
     # Calculate Result
-    if Imports["talib"] and mode_tal:
-        from talib import TRANGE
-        true_range = TRANGE(high, low, close)
+    if has_cuml() and mode_tal:
+        from cuml.dask.common import cuml_memcpy
+        true_range = cuml_memcpy(cudf.concat([high, low, close], axis=1)).TrueRange()
     else:
         high_low_range = non_zero_range(high, low)
         prev_close = close.shift(drift)
         ranges = [high_low_range, high - prev_close, prev_close - low]
-        true_range = concat(ranges, axis=1)
+        true_range = cudf.concat(ranges, axis=1)
         true_range = true_range.abs().max(axis=1)
-        true_range.iloc[:drift] = npNaN
+        true_range.iloc[:drift] = np.nan
 
     # Offset
     if offset != 0:
@@ -61,18 +62,18 @@ Calculation:
     TRUE_RANGE = ABS([high - low, high - prev_close, low - prev_close])
 
 Args:
-    high (pd.Series): Series of 'high's
-    low (pd.Series): Series of 'low's
-    close (pd.Series): Series of 'close's
-    talib (bool): If TA Lib is installed and talib is True, Returns the TA Lib
+    high (cudf.Series or list): Series of 'high's
+    low (cudf.Series or list): Series of 'low's
+    close (cudf.Series or list): Series of 'close's
+    talib (bool): If CuML is installed and talib is True, Returns the CuML
         version. Default: True
     drift (int): The shift period. Default: 1
     offset (int): How many periods to offset the result. Default: 0
 
 Kwargs:
-    fillna (value, optional): pd.DataFrame.fillna(value)
+    fillna (value, optional): cudf.Series.fillna(value)
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature
+    cudf.Series: New feature
 """

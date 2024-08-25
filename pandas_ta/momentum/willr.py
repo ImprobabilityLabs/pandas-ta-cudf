@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
+import cudf
 from pandas_ta import Imports
 from pandas_ta.utils import get_offset, verify_series
-
 
 def willr(high, low, close, length=None, talib=None, offset=None, **kwargs):
     """Indicator: William's Percent R (WILLR)"""
@@ -22,8 +22,8 @@ def willr(high, low, close, length=None, talib=None, offset=None, **kwargs):
         from talib import WILLR
         willr = WILLR(high, low, close, length)
     else:
-        lowest_low = low.rolling(length, min_periods=min_periods).min()
-        highest_high = high.rolling(length, min_periods=min_periods).max()
+        lowest_low = low.rolling(window=length, min_periods=min_periods).min()
+        highest_high = high.rolling(window=length, min_periods=min_periods).max()
 
         willr = 100 * ((close - lowest_low) / (highest_high - lowest_low) - 1)
 
@@ -43,7 +43,6 @@ def willr(high, low, close, length=None, talib=None, offset=None, **kwargs):
 
     return willr
 
-
 willr.__doc__ = \
 """William's Percent R (WILLR)
 
@@ -62,9 +61,9 @@ Calculation:
     WILLR = 100 * ((close - LL) / (HH - LL) - 1)
 
 Args:
-    high (pd.Series): Series of 'high's
-    low (pd.Series): Series of 'low's
-    close (pd.Series): Series of 'close's
+    high (pd.Series or cudf.Series): Series of 'high's
+    low (pd.Series or cudf.Series): Series of 'low's
+    close (pd.Series or cudf.Series): Series of 'close's
     length (int): It's period. Default: 14
     talib (bool): If TA Lib is installed and talib is True, Returns the TA Lib
         version. Default: True
@@ -75,5 +74,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    pd.Series or cudf.Series: New feature generated.
 """

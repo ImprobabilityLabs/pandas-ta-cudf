@@ -1,8 +1,12 @@
 # -*- coding: utf-8 -*-
-from pandas_ta.overlap import sma
+import cudf
+from pandas_ta.overlap import sma as cpu_sma
 from pandas_ta.utils import get_offset, high_low_range, is_percent
 from pandas_ta.utils import real_body, verify_series
+import pandas as pd
 
+def sma(cuda-ser, length):
+    return cuda-ser.rolling(window=length).mean()
 
 def cdl_doji(open_, high, low, close, length=None, factor=None, scalar=None, asint=True, offset=None, **kwargs):
     """Candle Type: Doji"""
@@ -20,8 +24,13 @@ def cdl_doji(open_, high, low, close, length=None, factor=None, scalar=None, asi
     if open_ is None or high is None or low is None or close is None: return
 
     # Calculate Result
-    body = real_body(open_, close).abs()
-    hl_range = high_low_range(high, low).abs()
+    open_cuda = cudf.Series(open_.values)
+    high_cuda = cudf.Series(high.values)
+    low_cuda = cudf.Series(low.values)
+    close_cuda = cudf.Series(close.values)
+
+    body = real_body(open_cuda, close_cuda).abs()
+    hl_range = high_low_range(high_cuda, low_cuda).abs()
     hl_range_avg = sma(hl_range, length)
     doji = body < 0.01 * factor * hl_range_avg
 
@@ -44,46 +53,4 @@ def cdl_doji(open_, high, low, close, length=None, factor=None, scalar=None, asi
     doji.name = f"CDL_DOJI_{length}_{0.01 * factor}"
     doji.category = "candles"
 
-    return doji
-
-
-cdl_doji.__doc__ = \
-"""Candle Type: Doji
-
-A candle body is Doji, when it's shorter than 10% of the
-average of the 10 previous candles' high-low range.
-
-Sources:
-    TA-Lib: 96.56% Correlation
-
-Calculation:
-    Default values:
-        length=10, percent=10 (0.1), scalar=100
-    ABS = Absolute Value
-    SMA = Simple Moving Average
-
-    BODY = ABS(close - open)
-    HL_RANGE = ABS(high - low)
-
-    DOJI = scalar IF BODY < 0.01 * percent * SMA(HL_RANGE, length) ELSE 0
-
-Args:
-    open_ (pd.Series): Series of 'open's
-    high (pd.Series): Series of 'high's
-    low (pd.Series): Series of 'low's
-    close (pd.Series): Series of 'close's
-    length (int): The period. Default: 10
-    factor (float): Doji value. Default: 100
-    scalar (float): How much to magnify. Default: 100
-    asint (bool): Keep results numerical instead of boolean. Default: True
-
-Kwargs:
-    naive (bool, optional): If True, prefills potential Doji less than
-        the length if less than a percentage of it's high-low range.
-        Default: False
-    fillna (value, optional): pd.DataFrame.fillna(value)
-    fill_method (value, optional): Type of fill method
-
-Returns:
-    pd.Series: CDL_DOJI column.
-"""
+    return doji.to_pandas()

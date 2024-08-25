@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import cudf
 from .adx import adx
 from .amat import amat
 from .aroon import aroon

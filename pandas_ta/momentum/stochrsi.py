@@ -1,9 +1,9 @@
+```python
 # -*- coding: utf-8 -*-
-from pandas import DataFrame
+import cudf
 from .rsi import rsi
 from pandas_ta.overlap import ma
 from pandas_ta.utils import get_offset, non_zero_range, verify_series
-
 
 def stochrsi(close, length=None, rsi_length=None, k=None, d=None, mamode=None, offset=None, **kwargs):
     """Indicator: Stochastic RSI Oscillator (STOCHRSI)"""
@@ -18,10 +18,13 @@ def stochrsi(close, length=None, rsi_length=None, k=None, d=None, mamode=None, o
 
     if close is None: return
 
+    # Convert to CuDF
+    close = cudf.Series(close)
+
     # Calculate Result
     rsi_ = rsi(close, length=rsi_length)
-    lowest_rsi = rsi_.rolling(length).min()
-    highest_rsi = rsi_.rolling(length).max()
+    lowest_rsi = rsi_.rolling(window=length).min()
+    highest_rsi = rsi_.rolling(window=length).max()
 
     stoch = 100 * (rsi_ - lowest_rsi)
     stoch /= non_zero_range(highest_rsi, lowest_rsi)
@@ -51,7 +54,7 @@ def stochrsi(close, length=None, rsi_length=None, k=None, d=None, mamode=None, o
 
     # Prepare DataFrame to return
     data = {stochrsi_k.name: stochrsi_k, stochrsi_d.name: stochrsi_d}
-    df = DataFrame(data)
+    df = cudf.DataFrame(data)
     df.name = f"{_name}{_props}"
     df.category = stochrsi_k.category
 
@@ -103,3 +106,4 @@ Kwargs:
 Returns:
     pd.DataFrame: RSI %K, RSI %D columns.
 """
+```

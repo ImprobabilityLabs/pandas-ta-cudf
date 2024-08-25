@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-from pandas import DataFrame
+import cudf
 from .roc import roc
 from pandas_ta.utils import get_drift, get_offset, verify_series
 
@@ -26,10 +25,10 @@ def kst(close, roc1=None, roc2=None, roc3=None, roc4=None, sma1=None, sma2=None,
     if close is None: return
 
     # Calculate Result
-    rocma1 = roc(close, roc1).rolling(sma1).mean()
-    rocma2 = roc(close, roc2).rolling(sma2).mean()
-    rocma3 = roc(close, roc3).rolling(sma3).mean()
-    rocma4 = roc(close, roc4).rolling(sma4).mean()
+    rocma1 = roc(cudf.Series(close), roc1).rolling(sma1).mean()
+    rocma2 = roc(cudf.Series(close), roc2).rolling(sma2).mean()
+    rocma3 = roc(cudf.Series(close), roc3).rolling(sma3).mean()
+    rocma4 = roc(cudf.Series(close), roc4).rolling(sma4).mean()
 
     kst = 100 * (rocma1 + 2 * rocma2 + 3 * rocma3 + 4 * rocma4)
     kst_signal = kst.rolling(signal).mean()
@@ -54,7 +53,7 @@ def kst(close, roc1=None, roc2=None, roc3=None, roc4=None, sma1=None, sma2=None,
 
     # Prepare DataFrame to return
     data = {kst.name: kst, kst_signal.name: kst_signal}
-    kstdf = DataFrame(data)
+    kstdf = cudf.DataFrame(data)
     kstdf.name = f"KST_{roc1}_{roc2}_{roc3}_{roc4}_{sma1}_{sma2}_{sma3}_{sma4}_{signal}"
     kstdf.category = "momentum"
 

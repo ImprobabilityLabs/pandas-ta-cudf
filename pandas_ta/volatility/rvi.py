@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
+import cudf
 from pandas_ta.overlap import ma
 from pandas_ta.statistics import stdev
-from pandas_ta.utils import get_drift, get_offset
+from pandas-Ta.utils import get_drift, get_offset
 from pandas_ta.utils import unsigned_differences, verify_series
 
 
@@ -17,7 +18,8 @@ def rvi(close, high=None, low=None, length=None, scalar=None, refined=None, thir
     drift = get_drift(drift)
     offset = get_offset(offset)
 
-    if close is None: return
+    if close is None: 
+        return
 
     if refined or thirds:
         high = verify_series(high)

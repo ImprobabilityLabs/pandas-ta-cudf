@@ -1,11 +1,11 @@
+```
 # -*- coding: utf-8 -*-
 from typing import Sequence, Union
-from pandas import Series, DataFrame
-
+import cudf
+from cudf import Series, DataFrame
 from . import cdl_doji, cdl_inside
 from pandas_ta.utils import get_offset, verify_series
 from pandas_ta import Imports
-
 
 ALL_PATTERNS = [
     "2crows", "3blackcrows", "3inside", "3linestrike", "3outside", "3starsinsouth",
@@ -22,14 +22,13 @@ ALL_PATTERNS = [
     "unique3river", "upsidegap2crows", "xsidegap3methods"
 ]
 
-
 def cdl_pattern(open_, high, low, close, name: Union[str, Sequence[str]]="all", scalar=None, offset=None, **kwargs) -> DataFrame:
     """Candle Pattern"""
     # Validate Arguments
-    open_ = verify_series(open_)
-    high = verify_series(high)
-    low = verify_series(low)
-    close = verify_series(close)
+    open_ = cudf.Series(open_)
+    high = cudf.Series(high)
+    low = cudf.Series(low)
+    close = cudf.Series(close)
     offset = get_offset(offset)
     scalar = float(scalar) if scalar else 100
 
@@ -61,7 +60,7 @@ def cdl_pattern(open_, high, low, close, name: Union[str, Sequence[str]]="all", 
                 continue
 
             pattern_func = tala.Function(f"CDL{n.upper()}")
-            pattern_result = Series(pattern_func(open_, high, low, close, **kwargs) / 100 * scalar)
+            pattern_result = cudf.Series(pattern_func(open_, high, low, close, **kwargs) / 100 * scalar)
             pattern_result.index = close.index
 
             # Offset
@@ -79,11 +78,10 @@ def cdl_pattern(open_, high, low, close, name: Union[str, Sequence[str]]="all", 
     if len(result) == 0: return
 
     # Prepare DataFrame to return
-    df = DataFrame(result)
+    df = cudf.DataFrame(result)
     df.name = "CDL_PATTERN"
     df.category = "candles"
     return df
-
 
 cdl_pattern.__doc__ = \
 """Candle Pattern
@@ -108,10 +106,10 @@ Or
 >>> df.ta.cdl(["doji", "inside"], append=True)
 
 Args:
-    open_ (pd.Series): Series of 'open's
-    high (pd.Series): Series of 'high's
-    low (pd.Series): Series of 'low's
-    close (pd.Series): Series of 'close's
+    open_ (cu.Series): Series of 'open's
+    high (cu.Series): Series of 'high's
+    low (cu.Series): Series of 'low's
+    close (cu.Series): Series of 'close's
     name: (Union[str, Sequence[str]]): name of the patterns
     scalar (float): How much to magnify. Default: 100
     offset (int): How many periods to offset the result. Default: 0
@@ -121,7 +119,7 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.DataFrame: one column for each pattern.
+    cu.DataFrame: one column for each pattern.
 """
 
 cdl = cdl_pattern

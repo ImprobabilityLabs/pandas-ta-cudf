@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-from numpy import nan as npNaN
+import cudf
+from cudf import cuda
 from pandas_ta import Imports
 from pandas_ta.utils import get_offset, verify_series
 
@@ -16,15 +17,19 @@ def ema(close, length=None, talib=None, offset=None, **kwargs):
 
     if close is None: return
 
+    # Ensure close is a CuDF Series
+    close = cudf.Series(close)
+
     # Calculate Result
     if Imports["talib"] and mode_tal:
         from talib import EMA
-        ema = EMA(close, length)
+        ema = EMA(close.to_pandas(), length)
+        ema = cudf.Series(ema)
     else:
         if sma:
             close = close.copy()
-            sma_nth = close[0:length].mean()
-            close[:length - 1] = npNaN
+            sma_nth = close[:length].mean()
+            close[:length - 1] = cuda.nan
             close.iloc[length - 1] = sma_nth
         ema = close.ewm(span=length, adjust=adjust).mean()
 

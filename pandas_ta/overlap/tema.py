@@ -1,8 +1,7 @@
-# -*- coding: utf-8 -*-
 from .ema import ema
 from pandas_ta import Imports
 from pandas_ta.utils import get_offset, verify_series
-
+import cudf
 
 def tema(close, length=None, talib=None, offset=None, **kwargs):
     """Indicator: Triple Exponential Moving Average (TEMA)"""
@@ -17,9 +16,11 @@ def tema(close, length=None, talib=None, offset=None, **kwargs):
     # Calculate Result
     if Imports["talib"] and mode_tal:
         from talib import TEMA
-        tema = TEMA(close, length)
+        close_cuda = cudf.Series(close.values)
+        tema = cudf.Series(TEMA(close_cuda, length).values)
     else:
-        ema1 = ema(close=close, length=length, **kwargs)
+        close_cuda = cudf.Series(close.values)
+        ema1 = ema(close=close_cuda, length=length, **kwargs)
         ema2 = ema(close=ema1, length=length, **kwargs)
         ema3 = ema(close=ema2, length=length, **kwargs)
         tema = 3 * (ema1 - ema2) + ema3

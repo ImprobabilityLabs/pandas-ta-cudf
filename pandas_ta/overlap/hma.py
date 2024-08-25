@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-from numpy import sqrt as npSqrt
+import cupy as cp
+import cudf
 from .wma import wma
 from pandas_ta.utils import get_offset, verify_series
-
 
 def hma(close, length=None, offset=None, **kwargs):
     """Indicator: Hull Moving Average (HMA)"""
@@ -14,8 +14,10 @@ def hma(close, length=None, offset=None, **kwargs):
     if close is None: return
 
     # Calculate Result
+    close = cudf.Series(close._values)
+
     half_length = int(length / 2)
-    sqrt_length = int(npSqrt(length))
+    sqrt_length = int(cp.sqrt(length))
 
     wmaf = wma(close=close, length=half_length)
     wmas = wma(close=close, length=length)

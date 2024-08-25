@@ -1,7 +1,20 @@
 # -*- coding: utf-8 -*-
+import cudf
 from pandas_ta.overlap import ma
 from pandas_ta.utils import get_drift, get_offset, verify_series
 
+@cuda.jit
+def efi_cuda(close, volume, length, drift, offset, mamode):
+    i = cuda.grid(1)
+    if i < close.size:
+        pv_diff = close[i] * volume[i] - close[i - drift] * volume[i - drift]
+        efi = 0
+        for j in range(1, length + 1):
+            efi += pv_diff / j
+        if mamode == "ema":
+            efi /= 2.71828 ** (1 / length)
+        efi = efi if offset == 0 else efi[i - offset]
+    return efi
 
 def efi(close, volume, length=None, mamode=None, drift=None, offset=None, **kwargs):
     """Indicator: Elder's Force Index (EFI)"""
@@ -16,12 +29,9 @@ def efi(close, volume, length=None, mamode=None, drift=None, offset=None, **kwar
     if close is None or volume is None: return
 
     # Calculate Result
-    pv_diff = close.diff(drift) * volume
-    efi = ma(mamode, pv_diff, length=length)
-
-    # Offset
-    if offset != 0:
-        efi = efi.shift(offset)
+    close_cuda = cudf.Series(close)
+    volume_cuda = cudf.Series(volume)
+    efi = cudf.Series(efi_cuda[1, close_cuda.size](close_cuda, volume_cuda, length, drift, offset, mamode))
 
     # Handle fills
     if "fillna" in kwargs:
@@ -34,7 +44,6 @@ def efi(close, volume, length=None, mamode=None, drift=None, offset=None, **kwar
     efi.category = "volume"
 
     return efi
-
 
 efi.__doc__ = \
 """Elder's Force Index (EFI)

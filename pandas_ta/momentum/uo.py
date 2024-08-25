@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
-from pandas import DataFrame
+import cudf
+from cudf.core import DataFrame
 from pandas_ta import Imports
 from pandas_ta.utils import get_drift, get_offset, verify_series
 
@@ -40,9 +40,9 @@ def uo(high, low, close, fast=None, medium=None, slow=None, fast_w=None, medium_
         bp = close - min_l_or_pc
         tr = max_h_or_pc - min_l_or_pc
 
-        fast_avg = bp.rolling(fast).sum() / tr.rolling(fast).sum()
-        medium_avg = bp.rolling(medium).sum() / tr.rolling(medium).sum()
-        slow_avg = bp.rolling(slow).sum() / tr.rolling(slow).sum()
+        fast_avg = bp.rolling(window=fast).sum() / tr.rolling(window=fast).sum()
+        medium_avg = bp.rolling(window=medium).sum() / tr.rolling(window=medium).sum()
+        slow_avg = bp.rolling(window=slow).sum() / tr.rolling(window=slow).sum()
 
         total_weight = fast_w + medium_w + slow_w
         weights = (fast_w * fast_avg) + (medium_w * medium_avg) + (slow_w * slow_avg)
@@ -93,9 +93,9 @@ Calculation:
     UO = 100 * weights / total_weight
 
 Args:
-    high (pd.Series): Series of 'high's
-    low (pd.Series): Series of 'low's
-    close (pd.Series): Series of 'close's
+    high (cuDF.Series): Series of 'high's
+    low (cuDF.Series): Series of 'low's
+    close (cuDF.Series): Series of 'close's
     fast (int): The Fast %K period. Default: 7
     medium (int): The Slow %K period. Default: 14
     slow (int): The Slow %D period. Default: 28
@@ -108,9 +108,9 @@ Args:
     offset (int): How many periods to offset the result. Default: 0
 
 Kwargs:
-    fillna (value, optional): pd.DataFrame.fillna(value)
+    fillna (value, optional): cuDF.DataFrame.fillna(value)
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cuDF.Series: New feature generated.
 """

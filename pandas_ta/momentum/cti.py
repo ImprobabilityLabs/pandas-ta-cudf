@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-from pandas import Series
+import cudf
 from pandas_ta.overlap import linreg
 from pandas_ta.utils import get_offset, verify_series
 
 
-def cti(close, length=None, offset=None, **kwargs) -> Series:
+def cti(close, length=None, offset=None, **kwargs) -> cudf.Series:
     """Indicator: Correlation Trend Indicator"""
     length = int(length) if length and length > 0 else 12
     close = verify_series(close, length)
@@ -38,10 +38,10 @@ a positively- or negatively-sloping straight line. Values range from -1 to 1.
 This is a wrapper for ta.linreg(close, r=True).
 
 Args:
-    close (pd.Series): Series of 'close's
+    close (cudf.Series): Series of 'close's
     length (int): It's period. Default: 12
     offset (int): How many periods to offset the result. Default: 0
 
 Returns:
-    pd.Series: Series of the CTI values for the given period.
+    cudf.Series: Series of the CTI values for the given period.
 """

@@ -1,9 +1,9 @@
+```python
 # -*- coding: utf-8 -*-
-from pandas import DataFrame
+from cudf import DataFrame
 from pandas_ta import Imports, RATE, version
 from .._core import _camelCase2Title
 from .._time import ytd
-
 
 def yf(ticker: str, **kwargs):
     """yf - yfinance wrapper
@@ -90,14 +90,15 @@ def yf(ticker: str, **kwargs):
 
         try:
             df = yfd.history(period=period, interval=interval, proxy=proxy, **kwargs)
+            df_cu = DataFrame.from_pandas(df)
         except:
             if yfra.__version__ == "0.1.60":
                 print(f"[!] If history is not downloading, see yfinance Issue #760 by user djl0.")
                 print(f"[!] https://github.com/ranaroussi/yfinance/issues/760#issuecomment-877355832")
                 return
 
-        if df.empty: return
-        df.name = ticker
+        if df_cu.empty: return
+        df_cu.name = ticker
 
         try:
             ticker_info = yfd.info
@@ -106,14 +107,13 @@ def yf(ticker: str, **kwargs):
             return
 
         filtered = {k: v for k, v in ticker_info.items() if v is not None}
-        # print(f"\n{type(ticker_info)}\n{ticker_info}\n{ticker_info.items()}")
         ticker_info.clear()
         ticker_info.update(filtered)
 
         # Dividends and Splits
         dividends, splits = yfd.splits, yfd.dividends
 
-        _all, div = ["all"], "=" * 53 # Max div width is 80
+        _all, div = ["all"], "=" * 53  # Max div width is 80
         if kind in _all + ["info"] or verbose:
             description = kwargs.pop("desc", False)
             snd_length = kwargs.pop("snd", 5)
@@ -133,8 +133,16 @@ def yf(ticker: str, **kwargs):
                 else:
                     print(f"{ticker_info['address1']}")
 
-                if "city" in ticker_info and len(ticker_info["city"]) and "state" in ticker_info and len(ticker_info["state"]) \
-                    and "zip" in ticker_info and len(ticker_info["zip"]) and "country" in ticker_info and len(ticker_info["country"]):
+                if (
+                    "city" in ticker_info
+                    and len(ticker_info["city"])
+                    and "state" in ticker_info
+                    and len(ticker_info["state"])
+                    and "zip" in ticker_info
+                    and len(ticker_info["zip"])
+                    and "country" in ticker_info
+                    and len(ticker_info["country"])
+                ):
                     print(f"{ticker_info['city']}, {ticker_info['state']} {ticker_info['zip']}, {ticker_info['country']}")
                 else:
                     print(f"{ticker_info['state']} {ticker_info['zip']}, {ticker_info['country']}")
@@ -151,7 +159,6 @@ def yf(ticker: str, **kwargs):
             if "companyOfficers" in ticker_info and len(ticker_info['companyOfficers']):
                 print(f"Company Officers: {', '.join(ticker_info['companyOfficers'])}".ljust(40))
             if "sector" in ticker_info and len(ticker_info["sector"]) and "industry" in ticker_info and len(ticker_info["industry"]):
-                # print(f"Sector: {ticker_info['sector']}".ljust(39), f"Industry: {ticker_info['industry']}".rjust(40))
                 print(f"Sector | Industry".ljust(29), f"{ticker_info['sector']} | {ticker_info['industry']}".rjust(50))
 
             print("\n====  Market Information   " + div)
@@ -247,13 +254,13 @@ def yf(ticker: str, **kwargs):
             if not dividends.empty:
                 dividends.name = "Value"
                 total_dividends = dividends.size
-                dividendsdf = DataFrame(dividends.tail(snd_length)[::-1]).T
+                dividendsdf = DataFrame(dividends.tail(snd_length)[::-1].to_frame().T)
                 print(f"Dividends (Last {snd_length} of {total_dividends}):\n{dividendsdf}")
 
             if not splits.empty:
                 splits.name = "Ratio"
                 total_splits = splits.size
-                splitsdf = DataFrame(splits.tail(snd_length)[::-1]).T
+                splitsdf = DataFrame(splits.tail(snd_length)[::-1].to_frame().T)
                 print(f"\nStock Splits (Last {snd_length} of {total_splits}):\n{splitsdf}")
 
         if kind in _all + ["institutional_holders", "ih"]:
@@ -288,8 +295,6 @@ def yf(ticker: str, **kwargs):
             recdf = yfd.recommendations
             if recdf is not None:
                 recdf = ytd(recdf)
-                # recdf_grade = recdf["To Grade"].value_counts().T
-                # recdf_grade.name = "Grades"
                 if kind not in _all: print(f"\n{ticker_info['symbol']}")
                 print("\n====  Recommendation(YTD)  " + div + f"\n{recdf}")
 
@@ -375,23 +380,23 @@ def yf(ticker: str, **kwargs):
                         itm_calls = f"{calls.name}\n{calls[calls['ITM'] == itm]}"
                         itm_puts = f"{puts.name}\n{puts[puts['ITM'] == itm]}"
 
-                        if    just_calls: print(itm_calls)
-                        elif  just_puts: print(itm_puts)
+                        if just_calls: print(itm_calls)
+                        elif just_puts: print(itm_puts)
                         else: print(f"{itm_calls}\n\n{itm_puts}")
                     else:
                         all_calls, all_puts = f"{calls.name}\n{calls}", f"{puts.name}\n{puts}"
-                        if    just_calls: print(all_calls)
-                        elif  just_puts: print(all_puts)
+                        if just_calls: print(all_calls)
+                        elif just_puts: print(all_puts)
                         else: print(f"{all_calls}\n\n{all_puts}")
 
         if verbose:
             print("\n====  Chart History        " + div + f"\n[*] Pandas TA v{version} & yfinance v{yfra.__version__}")
             print(f"[+] Downloading {ticker}[{interval}:{period}] from Yahoo Finance")
         if show is not None and isinstance(show, int) and show > 0:
-            print(f"\n{df.name}\n{df.tail(show)}\n")
+            print(f"\n{df_cu.name}\n{df_cu.tail(show)}\n")
         if verbose: print("=" * 80 + "\n")
-        # else: print()
-        return df
+        return df_cu
 
     else:
         return DataFrame()
+```

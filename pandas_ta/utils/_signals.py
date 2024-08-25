@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from pandas import DataFrame, Series
+from cudf import DataFrame, Series
 
 from ._core import get_offset, verify_series
 from ._math import zero

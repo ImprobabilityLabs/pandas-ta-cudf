@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-from pandas import DataFrame
+import cudf
+from cudf.utils.dtypes import is_cuda_supported
 from pandas_ta.overlap import swma
 from pandas_ta.utils import get_offset, non_zero_range, verify_series
 
@@ -18,11 +19,15 @@ def rvgi(open_, high, low, close, length=None, swma_length=None, offset=None, **
     close = verify_series(close, _length)
     offset = get_offset(offset)
 
-    if open_ is None or high is None or low is None or close is None: return
+    if open_ is None or high is None or low is None or close is None: 
+        return
+
+    # Convert to CuDF DataFrame
+    df = cudf.DataFrame({'open': open_, 'high': high, 'low': low, 'close': close})
 
     # Calculate Result
-    numerator = swma(close_open_range, length=swma_length).rolling(length).sum()
-    denominator = swma(high_low_range, length=swma_length).rolling(length).sum()
+    numerator = swma(df['close'] - df['open'], length=swma_length).rolling(length).sum()
+    denominator = swma(df['high'] - df['low'], length=swma_length).rolling(length).sum()
 
     rvgi = numerator / denominator
     signal = swma(rvgi, length=swma_length)
@@ -46,7 +51,7 @@ def rvgi(open_, high, low, close, length=None, swma_length=None, offset=None, **
     rvgi.category = signal.category = "momentum"
 
     # Prepare DataFrame to return
-    df = DataFrame({rvgi.name: rvgi, signal.name: signal})
+    df = cudf.DataFrame({rvgi.name: rvgi, signal.name: signal})
     df.name = f"RVGI_{length}_{swma_length}"
     df.category = rvgi.category
 
@@ -73,10 +78,10 @@ Calculation:
     RVGI = numerator / denominator
 
 Args:
-    open_ (pd.Series): Series of 'open's
-    high (pd.Series): Series of 'high's
-    low (pd.Series): Series of 'low's
-    close (pd.Series): Series of 'close's
+    open_ (pd.Series or CuDF Series): Series of 'open's
+    high (pd.Series or CuDF Series): Series of 'high's
+    low (pd.Series or CuDF Series): Series of 'low's
+    close (pd.Series or CuDF Series): Series of 'close's
     length (int): It's period. Default: 14
     swma_length (int): It's period. Default: 4
     offset (int): How many periods to offset the result. Default: 0
@@ -86,5 +91,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    CuDF DataFrame: New feature generated.
 """

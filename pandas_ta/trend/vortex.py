@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
-from pandas import DataFrame
+import cudf
 from pandas_ta.volatility import true_range
 from pandas_ta.utils import get_drift, get_offset, verify_series
-
 
 def vortex(high, low, close, length=None, drift=None, offset=None, **kwargs):
     """Indicator: Vortex"""
@@ -20,13 +19,13 @@ def vortex(high, low, close, length=None, drift=None, offset=None, **kwargs):
 
     # Calculate Result
     tr = true_range(high=high, low=low, close=close)
-    tr_sum = tr.rolling(length, min_periods=min_periods).sum()
+    tr_sum = tr.rolling(window=length, min_periods=min_periods).sum()
 
     vmp = (high - low.shift(drift)).abs()
     vmm = (low - high.shift(drift)).abs()
 
-    vip = vmp.rolling(length, min_periods=min_periods).sum() / tr_sum
-    vim = vmm.rolling(length, min_periods=min_periods).sum() / tr_sum
+    vip = vmp.rolling(window=length, min_periods=min_periods).sum() / tr_sum
+    vim = vmm.rolling(window=length, min_periods=min_periods).sum() / tr_sum
 
     # Offset
     if offset != 0:
@@ -48,7 +47,7 @@ def vortex(high, low, close, length=None, drift=None, offset=None, **kwargs):
 
     # Prepare DataFrame to return
     data = {vip.name: vip, vim.name: vim}
-    vtxdf = DataFrame(data)
+    vtxdf = cudf.DataFrame(data)
     vtxdf.name = f"VTX_{length}"
     vtxdf.category = "trend"
 

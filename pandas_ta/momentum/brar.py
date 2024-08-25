@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
-from pandas import DataFrame
+import cudf
 from pandas_ta.utils import get_drift, get_offset, non_zero_range, verify_series
-
 
 def brar(open_, high, low, close, length=None, scalar=None, drift=None, offset=None, **kwargs):
     """Indicator: BRAR (BRAR)"""
@@ -52,12 +51,11 @@ def brar(open_, high, low, close, length=None, scalar=None, drift=None, offset=N
     ar.category = br.category = "momentum"
 
     # Prepare DataFrame to return
-    brardf = DataFrame({ar.name: ar, br.name: br})
+    brardf = cudf.DataFrame({ar.name: ar, br.name: br})
     brardf.name = f"BRAR{_props}"
     brardf.category = "momentum"
 
     return brardf
-
 
 brar.__doc__ = \
 """BRAR (BRAR)
@@ -83,10 +81,10 @@ Calculation:
     BR = scalar * SUM(HCY, length) / SUM(CYL, length)
 
 Args:
-    open_ (pd.Series): Series of 'open's
-    high (pd.Series): Series of 'high's
-    low (pd.Series): Series of 'low's
-    close (pd.Series): Series of 'close's
+    open_ (cu.Series): Series of 'open's
+    high (cu.Series): Series of 'high's
+    low (cu.Series): Series of 'low's
+    close (cu.Series): Series of 'close's
     length (int): The period. Default: 26
     scalar (float): How much to magnify. Default: 100
     drift (int): The difference period. Default: 1
@@ -97,5 +95,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.DataFrame: ar, br columns.
+    cu.DataFrame: ar, br columns.
 """

@@ -1,14 +1,15 @@
 # -*- coding: utf-8 -*-
-from pandas_ta.overlap import linreg
-from pandas_ta.utils import get_drift, get_offset, verify_series
+from cuml_overlap import linreg
+from cuml_utils import get_drift, get_offset, verify_series
 
+import cudf
 
 def cfo(close, length=None, scalar=None, drift=None, offset=None, **kwargs):
     """Indicator: Chande Forcast Oscillator (CFO)"""
     # Validate Arguments
     length = int(length) if length and length > 0 else 9
     scalar = float(scalar) if scalar else 100
-    close = verify_series(close, length)
+    close = cudf.Series(close) if not isinstance(close, cudf.Series) else close
     drift = get_drift(drift)
     offset = get_offset(offset)
 
@@ -52,16 +53,16 @@ Calculation:
     CFO = scalar * (close - LINERREG(length, tdf=True)) / close
 
 Args:
-    close (pd.Series): Series of 'close's
+    close (cuDF.Series): Series of 'close's
     length (int): The period. Default: 9
     scalar (float): How much to magnify. Default: 100
     drift (int): The short period. Default: 1
     offset (int): How many periods to offset the result. Default: 0
 
 Kwargs:
-    fillna (value, optional): pd.DataFrame.fillna(value)
+    fillna (value, optional): cuDF.DataFrame.fillna(value)
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cuDF.Series: New feature generated.
 """

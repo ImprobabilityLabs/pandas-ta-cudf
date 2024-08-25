@@ -1,8 +1,11 @@
+```
 # -*- coding: utf-8 -*-
-from pandas import DataFrame
-from pandas_ta.overlap.ema import ema
+import cudf
+from pandas_ta.overlap.ema import ema as pd_ema
 from pandas_ta.utils import get_drift, get_offset, verify_series
 
+def emaclose(cudf_series, length):
+    return cudf.Series(cudf_series).ewm(span=length, adjust=False).mean()
 
 def trix(close, length=None, signal=None, scalar=None, drift=None, offset=None, **kwargs):
     """Indicator: Trix (TRIX)"""
@@ -17,12 +20,12 @@ def trix(close, length=None, signal=None, scalar=None, drift=None, offset=None, 
     if close is None: return
 
     # Calculate Result
-    ema1 = ema(close=close, length=length, **kwargs)
-    ema2 = ema(close=ema1, length=length, **kwargs)
-    ema3 = ema(close=ema2, length=length, **kwargs)
+    ema1 = emaclose(close, length)
+    ema2 = emaclose(ema1, length)
+    ema3 = emaclose(ema2, length)
     trix = scalar * ema3.pct_change(drift)
 
-    trix_signal = trix.rolling(signal).mean()
+    trix_signal = trix.rolling(window=signal).mean()
 
     # Offset
     if offset != 0:
@@ -43,7 +46,7 @@ def trix(close, length=None, signal=None, scalar=None, drift=None, offset=None, 
     trix.category = trix_signal.category = "momentum"
 
     # Prepare DataFrame to return
-    df = DataFrame({trix.name: trix, trix_signal.name: trix_signal})
+    df = cudf.DataFrame({trix.name: trix, trix_signal.name: trix_signal})
     df.name = f"TRIX_{length}_{signal}"
     df.category = "momentum"
 
@@ -69,7 +72,7 @@ Calculation:
     TRIX = 100 * ROC(ema3, drift)
 
 Args:
-    close (pd.Series): Series of 'close's
+    close (pd.Series or cudf.Series): Series of 'close's
     length (int): It's period. Default: 18
     signal (int): It's period. Default: 9
     scalar (float): How much to magnify. Default: 100
@@ -81,5 +84,6 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cudf.DataFrame: New feature generated.
 """
+```

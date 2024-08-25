@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-from pandas import DataFrame
+import cudf
+from cudf.merge import merge
 from pandas_ta.overlap import ma
 from pandas_ta.utils import get_drift, get_offset, non_zero_range, verify_series
-
 
 def accbands(high, low, close, length=None, c=None, drift=None, mamode=None, offset=None, **kwargs):
     """Indicator: Acceleration Bands (ACCBANDS)"""
@@ -53,12 +53,11 @@ def accbands(high, low, close, length=None, c=None, drift=None, mamode=None, off
 
     # Prepare DataFrame to return
     data = {lower.name: lower, mid.name: mid, upper.name: upper}
-    accbandsdf = DataFrame(data)
+    accbandsdf = cudf.DataFrame(data)
     accbandsdf.name = f"ACCBANDS_{length}"
     accbandsdf.category = mid.category
 
     return accbandsdf
-
 
 accbands.__doc__ = \
 """Acceleration Bands (ACCBANDS)

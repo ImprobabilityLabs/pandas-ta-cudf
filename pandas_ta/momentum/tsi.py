@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
-from pandas import DataFrame
-from pandas_ta.overlap import ema, ma
-from pandas_ta.utils import get_drift, get_offset, verify_series
-
+import cudf
+from cudf.utils import cuda
+from pandas_ta.overlap import ema as cpu_ema, ma as cpu_ma
+from cudf_ta.overlap import ema, ma
+from cudf_ta.utils import get_drift, get_offset, verify_series
+import numpy as np
 
 def tsi(close, fast=None, slow=None, signal=None, scalar=None, mamode=None, drift=None, offset=None, **kwargs):
     """Indicator: True Strength Index (TSI)"""
@@ -21,8 +23,11 @@ def tsi(close, fast=None, slow=None, signal=None, scalar=None, mamode=None, drif
 
     if close is None: return
 
+    # Convert to CuDF DataFrame
+    close = cudf.DataFrame({'close': close})
+
     # Calculate Result
-    diff = close.diff(drift)
+    diff = close['close'].diff(drift)
     slow_ema = ema(close=diff, length=slow, **kwargs)
     fast_slow_ema = ema(close=slow_ema, length=fast, **kwargs)
 
@@ -52,7 +57,7 @@ def tsi(close, fast=None, slow=None, signal=None, scalar=None, mamode=None, drif
     tsi.category = tsi_signal.category =  "momentum"
 
     # Prepare DataFrame to return
-    df = DataFrame({tsi.name: tsi, tsi_signal.name: tsi_signal})
+    df = cudf.DataFrame({tsi.name: tsi, tsi_signal.name: tsi_signal})
     df.name = f"TSI_{fast}_{slow}_{signal}"
     df.category = "momentum"
 
@@ -85,7 +90,7 @@ Calculation:
     Signal = EMA(TSI, signal)
 
 Args:
-    close (pd.Series): Series of 'close's
+    close (pd.Series or cuDF.Series): Series of 'close's
     fast (int): The short period. Default: 13
     slow (int): The long period. Default: 25
     signal (int): The signal period. Default: 13
@@ -100,5 +105,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.DataFrame: tsi, signal.
+    cuDF.DataFrame: tsi, signal.
 """

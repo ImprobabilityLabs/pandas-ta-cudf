@@ -1,23 +1,26 @@
 # -*- coding: utf-8 -*-
-from pandas_ta.momentum import roc
+import cudf
+from cudf.utils import cuda
+from pandas_ta.momentum import roc as cpu_roc
 from pandas_ta.utils import get_offset, signed_series, verify_series
 
+def gpu_roc(close, length):
+    return close.pct_change(periods=length)
 
 def pvi(close, volume, length=None, initial=None, offset=None, **kwargs):
     """Indicator: Positive Volume Index (PVI)"""
     # Validate arguments
     length = int(length) if length and length > 0 else 1
-    # min_periods = int(kwargs["min_periods"]) if "min_periods" in kwargs and kwargs["min_periods"] is not None else length
     initial = int(initial) if initial and initial > 0 else 1000
-    close = verify_series(close, length)
-    volume = verify_series(volume, length)
+    close = verify_series(cudf.Series(close), length)
+    volume = verify_series(cudf.Series(volume), length)
     offset = get_offset(offset)
 
     if close is None or volume is None: return
 
     # Calculate Result
     signed_volume = signed_series(volume, 1)
-    pvi = roc(close=close, length=length) * signed_volume[signed_volume > 0].abs()
+    pvi = gpu_roc(close=close, length=length) * signed_volume[signed_volume > 0].abs()
     pvi.fillna(0, inplace=True)
     pvi.iloc[0] = initial
     pvi = pvi.cumsum()

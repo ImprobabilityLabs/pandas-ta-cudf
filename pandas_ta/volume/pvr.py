@@ -1,30 +1,33 @@
 # -*- coding: utf-8 -*-
-from pandas_ta.utils import verify_series
-from numpy import nan as npNaN
-from pandas import Series
+import cudf
+from cuml.utils import get_cuml_supported_sklearn_versions
+from cudf.utils import cuda
 
+from pandas_ta.utils import verify_series
+from numba import cuda
+import cusignal
+import cuml
 
 def pvr(close, volume):
     """ Indicator: Price Volume Rank"""
     # Validate arguments
-    close = verify_series(close)
-    volume = verify_series(volume)
+    close = cudf.Series(close)
+    volume = cudf.Series(volume)
 
     # Calculate Result
     close_diff = close.diff().fillna(0)
     volume_diff = volume.diff().fillna(0)
-    pvr_ = Series(npNaN, index=close.index)
-    pvr_.loc[(close_diff >= 0) & (volume_diff >= 0)] = 1
-    pvr_.loc[(close_diff >= 0) & (volume_diff < 0)]  = 2
-    pvr_.loc[(close_diff < 0) & (volume_diff >= 0)]  = 3
-    pvr_.loc[(close_diff < 0) & (volume_diff < 0)]   = 4
+    pvr_ = cudf.Series(cuda.to_device(close.index), dtype=cudf.float64)
+    pvr_[((close_diff >= 0) & (volume_diff >= 0))] = 1
+    pvr_[((close_diff >= 0) & (volume_diff < 0))] = 2
+    pvr_[((close_diff < 0) & (volume_diff >= 0))] = 3
+    pvr_[((close_diff < 0) & (volume_diff < 0))] = 4
 
     # Name and Categorize it
     pvr_.name = f"PVR"
     pvr_.category = "volume"
 
     return pvr_
-
 
 pvr.__doc__ = \
 """Price Volume Rank
@@ -45,9 +48,9 @@ Calculation:
     return 4 if 'close change' < 0 and 'volume change' < 0
 
 Args:
-    close (pd.Series): Series of 'close's
-    volume (pd.Series): Series of 'volume's
+    close (cuDF.Series): Series of 'close's
+    volume (cuDF.Series): Series of 'volume's
 
 Returns:
-    pd.Series: New feature generated.
+    cuDF.Series: New feature generated.
 """

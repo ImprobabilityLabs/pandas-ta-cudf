@@ -1,20 +1,23 @@
 # -*- coding: utf-8 -*-
-from pandas_ta.utils import fibonacci, get_offset, verify_series, weights
+import cusignal
+import cupy as cp
+import cudf
 
+from pandas_ta.utils import fibonacci, get_offset, verify_series, weights
 
 def fwma(close, length=None, asc=None, offset=None, **kwargs):
     """Indicator: Fibonacci's Weighted Moving Average (FWMA)"""
     # Validate Arguments
     length = int(length) if length and length > 0 else 10
     asc = asc if asc else True
-    close = verify_series(close, length)
+    close = verify_series(cudf.Series(close), length)
     offset = get_offset(offset)
 
     if close is None: return
 
     # Calculate Result
     fibs = fibonacci(n=length, weighted=True)
-    fwma = close.rolling(length, min_periods=length).apply(weights(fibs), raw=True)
+    fwma = cusignal.window.weighted-moving-average(close, window=fibs)
 
     # Offset
     if offset != 0:
@@ -47,7 +50,7 @@ Calculation:
 
     def weights(w):
         def _compute(x):
-            return np.dot(w * x)
+            return cp.dot(w * x)
         return _compute
 
     fibs = utils.fibonacci(length - 1)

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
+import cudf
 from pandas_ta import Imports
 from pandas_ta.utils import get_offset, verify_series
-
 
 def wcp(high, low, close, talib=None, offset=None, **kwargs):
     """Indicator: Weighted Closing Price (WCP)"""
@@ -13,11 +13,14 @@ def wcp(high, low, close, talib=None, offset=None, **kwargs):
     mode_tal = bool(talib) if isinstance(talib, bool) else True
 
     # Calculate Result
-    if Imports["talib"] and mode_tal:
-        from talib import WCLPRICE
-        wcp = WCLPRICE(high, low, close)
+    if Imports["cupy"] and mode_tal:
+        import cupy as cp
+        high = cudf.Series(high).values
+        low = cudf.Series(low).values
+        close = cudf.Series(close).values
+        wcp = cp.ElementwiseKernel('float64 x, float64 y, float64 z', 'float64 out', '(x + y + 2 * z) / 4')(high, low, close)
     else:
-        wcp = (high + low + 2 * close) / 4
+        wcp = (cudf.Series(high) + cudf.Series(low) + 2 * cudf.Series(close)) / 4
 
     # Offset
     if offset != 0:
@@ -49,10 +52,10 @@ Calculation:
     WCP = (2 * close + high + low) / 4
 
 Args:
-    high (pd.Series): Series of 'high's
-    low (pd.Series): Series of 'low's
-    close (pd.Series): Series of 'close's
-    talib (bool): If TA Lib is installed and talib is True, Returns the TA Lib
+    high (cudf.Series): Series of 'high's
+    low (cudf.Series): Series of 'low's
+    close (cudf.Series): Series of 'close's
+    talib (bool): If cuPY is installed and talib is True, Returns the cuPY
         version. Default: True
     offset (int): How many periods to offset the result. Default: 0
 
@@ -61,5 +64,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cudf.Series: New feature generated.
 """

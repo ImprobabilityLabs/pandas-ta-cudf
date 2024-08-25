@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
-from pandas import DataFrame
+import cudf
 from pandas_ta.overlap import hlc3, ma
 from pandas_ta.utils import get_drift, get_offset, signed_series, verify_series
-
 
 def kvo(high, low, close, volume, fast=None, slow=None, signal=None, mamode=None, drift=None, offset=None, **kwargs):
     """Indicator: Klinger Volume Oscillator (KVO)"""
@@ -48,12 +47,11 @@ def kvo(high, low, close, volume, fast=None, slow=None, signal=None, mamode=None
 
     # Prepare DataFrame to return
     data = {kvo.name: kvo, kvo_signal.name: kvo_signal}
-    df = DataFrame(data)
+    df = cudf.DataFrame(data)
     df.name = f"KVO{_props}"
     df.category = kvo.category
 
     return df
-
 
 kvo.__doc__ = \
 """Klinger Volume Oscillator (KVO)

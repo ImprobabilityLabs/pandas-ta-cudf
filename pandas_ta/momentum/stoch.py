@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
-from pandas import DataFrame
-from pandas_ta.overlap import ma
-from pandas_ta.utils import get_offset, non_zero_range, verify_series
-
+import cudf
+from cu quantitative.ta.overlap import ma
+from cu quantitative.ta.utils import get_offset, non_zero_range, verify_series
 
 def stoch(high, low, close, k=None, d=None, smooth_k=None, mamode=None, offset=None, **kwargs):
     """Indicator: Stochastic Oscillator (STOCH)"""
@@ -51,7 +50,7 @@ def stoch(high, low, close, k=None, d=None, smooth_k=None, mamode=None, offset=N
 
     # Prepare DataFrame to return
     data = {stoch_k.name: stoch_k, stoch_d.name: stoch_d}
-    df = DataFrame(data)
+    df = cudf.DataFrame(data)
     df.name = f"{_name}{_props}"
     df.category = stoch_k.category
     return df
@@ -85,13 +84,13 @@ Calculation:
     STOCHd = SMA(FASTK, d)
 
 Args:
-    high (pd.Series): Series of 'high's
-    low (pd.Series): Series of 'low's
-    close (pd.Series): Series of 'close's
+    high (cu quantitative.Series): Series of 'high's
+    low (cu quantitative.Series): Series of 'low's
+    close (cu quantitative.Series): Series of 'close's
     k (int): The Fast %K period. Default: 14
     d (int): The Slow %K period. Default: 3
     smooth_k (int): The Slow %D period. Default: 3
-    mamode (str): See ```help(ta.ma)```. Default: 'sma'
+    mamode (str): See ```help(cu quantitative.ta.ma)```. Default: 'sma'
     offset (int): How many periods to offset the result. Default: 0
 
 Kwargs:
@@ -99,5 +98,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.DataFrame: %K, %D columns.
+    cu quantitative.DataFrame: %K, %D columns.
 """

@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
-from .ema import ema
+import cudf
 from pandas_ta import Imports
 from pandas_ta.utils import get_offset, verify_series
 
+def ema_cu(close, length):
+    return close.ewm(span=length, adjust=False).mean()
 
 def dema(close, length=None, talib=None, offset=None, **kwargs):
     """Indicator: Double Exponential Moving Average (DEMA)"""
@@ -15,12 +17,12 @@ def dema(close, length=None, talib=None, offset=None, **kwargs):
     if close is None: return
 
     # Calculate Result
-    if Imports["talib"] and mode_tal:
-        from talib import DEMA
-        dema = DEMA(close, length)
+    if mode_tal:
+        import cuml
+        dema = cuml.DEMA(close, length)
     else:
-        ema1 = ema(close=close, length=length)
-        ema2 = ema(close=ema1, length=length)
+        ema1 = ema_cu(close, length)
+        ema2 = ema_cu(ema1, length)
         dema = 2 * ema1 - ema2
 
     # Offset
@@ -38,7 +40,6 @@ def dema(close, length=None, talib=None, offset=None, **kwargs):
     dema.category = "overlap"
 
     return dema
-
 
 dema.__doc__ = \
 """Double Exponential Moving Average (DEMA)
@@ -59,7 +60,7 @@ Calculation:
     DEMA = 2 * ema1 - ema2
 
 Args:
-    close (pd.Series): Series of 'close's
+    close (cuDF.Series): Series of 'close's
     length (int): It's period. Default: 10
     talib (bool): If TA Lib is installed and talib is True, Returns the TA Lib
         version. Default: True
@@ -70,5 +71,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cuDF.Series: New feature generated.
 """

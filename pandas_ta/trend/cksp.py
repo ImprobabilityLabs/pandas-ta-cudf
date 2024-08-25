@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
-from pandas import DataFrame
-from pandas_ta.volatility import atr
-from pandas_ta.utils import get_offset, verify_series
+import cudf
+from cupy import rolling
+from pandas-Ta.cudf_ta.volatility import atr
+from pandas-Ta.cudf_ta.utils import get_offset, verify_series
 
 
 def cksp(high, low, close, p=None, x=None, q=None, tvmode=None, offset=None, **kwargs):
@@ -25,11 +26,11 @@ def cksp(high, low, close, p=None, x=None, q=None, tvmode=None, offset=None, **k
     # Calculate Result
     atr_ = atr(high=high, low=low, close=close, length=p, mamode=mamode)
 
-    long_stop_ = high.rolling(p).max() - x * atr_
-    long_stop = long_stop_.rolling(q).max()
+    long_stop_ = rolling.max(high, p) - x * atr_
+    long_stop = rolling.max(long_stop_, q)
 
-    short_stop_ = low.rolling(p).min() + x * atr_
-    short_stop = short_stop_.rolling(q).min()
+    short_stop_ = rolling.min(low, p) + x * atr_
+    short_stop = rolling.min(short_stop_, q)
 
     # Offset
     if offset != 0:
@@ -51,7 +52,7 @@ def cksp(high, low, close, p=None, x=None, q=None, tvmode=None, offset=None, **k
     long_stop.category = short_stop.category = "trend"
 
     # Prepare DataFrame to return
-    ckspdf = DataFrame({long_stop.name: long_stop, short_stop.name: short_stop})
+    ckspdf = cudf.DataFrame({long_stop.name: long_stop, short_stop.name: short_stop})
     ckspdf.name = f"CKSP{_props}"
     ckspdf.category = long_stop.category
 
@@ -86,7 +87,7 @@ Calculation:
     SS = SS0.rolling(q).min()
 
 Args:
-    close (pd.Series): Series of 'close's
+    close (cuDF.Series): Series of 'close's
     p (int): ATR and first stop period. Default: 10 in both modes
     x (float): ATR scalar. Default: 1 in TV mode, 3 otherwise
     q (int): Second stop period. Default: 9 in TV mode, 20 otherwise
@@ -98,5 +99,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.DataFrame: long and short columns.
+    cuDF.DataFrame: long and short columns.
 """

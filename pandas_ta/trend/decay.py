@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
+import cudf
+import cupy as cp
 from numpy import exp as npExp
-from pandas import DataFrame
-from pandas_ta.utils import get_offset, verify_series
+from cudf_ta.utils import get_offset, verify_series
 
 
 def decay(close, kind=None, length=None, mode=None, offset=None, **kwargs):
@@ -18,11 +19,11 @@ def decay(close, kind=None, length=None, mode=None, offset=None, **kwargs):
     _mode = "L"
     if mode == "exp" or kind == "exponential":
         _mode = "EXP"
-        diff = close.shift(1) - npExp(-length)
+        diff = close.shift(1) - cp.exp(-length)
     else:  # "linear"
         diff = close.shift(1) - (1 / length)
     diff[0] = close[0]
-    tdf = DataFrame({"close": close, "diff": diff, "0": 0})
+    tdf = cudf.DataFrame({"close": close, "diff": diff, "0": 0})
     ld = tdf.max(axis=1)
 
     # Offset

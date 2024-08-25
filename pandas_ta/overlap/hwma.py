@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-from pandas import Series
+import cudf
+from cudf.core.series import Series
 from pandas_ta.utils import get_offset, verify_series
 
 
@@ -11,6 +12,7 @@ def hwma(close, na=None, nb=None, nc=None, offset=None, **kwargs):
     nc = float(nc) if nc and nc > 0 and nc < 1 else 0.1
     close = verify_series(close)
     offset = get_offset(offset)
+    close = cudf.Series.from_pandas(close)
 
     # Calculate Result
     last_a = last_v = 0
@@ -23,9 +25,9 @@ def hwma(close, na=None, nb=None, nc=None, offset=None, **kwargs):
         V = (1.0 - nb) * (last_v + last_a) + nb * (F - last_f)
         A = (1.0 - nc) * last_a + nc * (V - last_v)
         result.append((F + V + 0.5 * A))
-        last_a, last_f, last_v = A, F, V # update values
+        last_a, last_f, last_v = A, F, V  # update values
 
-    hwma = Series(result, index=close.index)
+    hwma = cudf.Series(result, index=close.index)
 
     # Offset
     if offset != 0:
@@ -78,5 +80,4 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: hwma
-"""
+    pd.Series: hwma"""

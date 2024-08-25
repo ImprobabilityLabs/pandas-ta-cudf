@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
-from numpy import array as npArray
-from numpy import arange as npArange
-from numpy import polyfit as npPolyfit
-from numpy import std as npStd
-from pandas import DataFrame, DatetimeIndex, Series
+import cudf
+from cuml.preprocessing.polynomial import PolyFit
+from cuml.metrics import std as cuStd
 from .stdev import stdev as stdev
 from pandas_ta.utils import get_offset, verify_series
 
@@ -30,17 +28,13 @@ def tos_stdevall(close, length=None, stds=None, ddof=None, offset=None, **kwargs
     if close is None: return
 
     # Calculate Result
-    X = src_index = close.index
-    if isinstance(close.index, DatetimeIndex):
-        X = npArange(length)
-        close = npArray(close)
-
-    m, b = npPolyfit(X, close, 1)
-    lr = Series(m * X + b, index=src_index)
-    stdev = npStd(close, ddof=ddof)
+    X = cudf.Series(arange(length))
+    m, b = PolyFit(X, close, 1).coef
+    lr = cudf.Series(m * X + b, index=close.index)
+    stdev = cuStd(close, ddof=ddof)
 
     # Name and Categorize it
-    df = DataFrame({f"{_props}_LR": lr}, index=src_index)
+    df = cudf.DataFrame({f"{_props}_LR": lr}, index=close.index)
     for i in stds:
         df[f"{_props}_L_{i}"] = lr - i * stdev
         df[f"{_props}_U_{i}"] = lr + i * stdev

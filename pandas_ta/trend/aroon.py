@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from pandas import DataFrame
+import cudf
 from pandas_ta import Imports
 from pandas_ta.utils import get_offset, verify_series
 from pandas_ta.utils import recent_maximum_index, recent_minimum_index
@@ -23,12 +23,14 @@ def aroon(high, low, length=None, scalar=None, talib=None, offset=None, **kwargs
         aroon_down, aroon_up = AROON(high, low, length)
         aroon_osc = AROONOSC(high, low, length)
     else:
-        periods_from_hh = high.rolling(length + 1).apply(recent_maximum_index, raw=True)
-        periods_from_ll = low.rolling(length + 1).apply(recent_minimum_index, raw=True)
+        high_gpu = cudf.Series(high)
+        low_gpu = cudf.Series(low)
 
-        aroon_up = aroon_down = scalar
-        aroon_up *= 1 - (periods_from_hh / length)
-        aroon_down *= 1 - (periods_from_ll / length)
+        periods_from_hh = high_gpu.rolling(length + 1).apply(lambda x: x.argmin(), axis=0, nulls=" skip")
+        periods_from_ll = low_gpu.rolling(length + 1).apply(lambda x: x.argmax(), axis=0, nulls=" skip")
+
+        aroon_up = scalar * (1 - (periods_from_hh / length))
+        aroon_down = scalar * (1 - (periods_from_ll / length))
         aroon_osc = aroon_up - aroon_down
 
     # Handle fills
@@ -60,7 +62,7 @@ def aroon(high, low, length=None, scalar=None, talib=None, offset=None, **kwargs
         aroon_up.name: aroon_up,
         aroon_osc.name: aroon_osc,
     }
-    aroondf = DataFrame(data)
+    aroondf = cudf.DataFrame(data)
     aroondf.name = f"AROON_{length}"
     aroondf.category = aroon_down.category
 

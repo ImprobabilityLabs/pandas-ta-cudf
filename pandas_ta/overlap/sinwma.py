@@ -1,22 +1,28 @@
 # -*- coding: utf-8 -*-
-from numpy import pi as npPi
-from numpy import sin as npSin
-from pandas import Series
-from pandas_ta.utils import get_offset, verify_series, weights
+import cudf
+import cupy as cp
+from cuml.preprocessing import FunctionTransformer
+from cuml.utils import get_cuda_arch
 
+cp.cuda.runtime.setDevice(0)
 
 def sinwma(close, length=None, offset=None, **kwargs):
     """Indicator: Sine Weighted Moving Average (SINWMA) by Everget of TradingView"""
     # Validate Arguments
     length = int(length) if length and length > 0 else 14
-    close = verify_series(close, length)
+    close = cudf.Series(verify_series(cudf.Series(close), length))
     offset = get_offset(offset)
 
     if close is None: return
 
     # Calculate Result
-    sines = Series([npSin((i + 1) * npPi / (length + 1)) for i in range(0, length)])
+    sines = cudf.Series([cp.sin((i + 1) * cp.pi / (length + 1)) for i in range(0, length)])
     w = sines / sines.sum()
+
+    def weights(w):
+        def _compute(x):
+            return cp.dot(w * x)
+        return _compute
 
     sinwma = close.rolling(length, min_periods=length).apply(weights(w), raw=True)
 
@@ -53,10 +59,10 @@ Calculation:
 
     def weights(w):
         def _compute(x):
-            return np.dot(w * x)
+            return cp.dot(w * x)
         return _compute
 
-    sines = Series([sin((i + 1) * pi / (length + 1)) for i in range(0, length)])
+    sines = cudf.Series([cp.sin((i + 1) * cp.pi / (length + 1)) for i in range(0, length)])
     w = sines / sines.sum()
     SINWMA = close.rolling(length, min_periods=length).apply(weights(w), raw=True)
 

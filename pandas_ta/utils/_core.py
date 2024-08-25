@@ -2,12 +2,14 @@
 import re as re_
 from pathlib import Path
 from sys import float_info as sflt
+import cudf
+import cuml
 
-from numpy import argmax, argmin
-from pandas import DataFrame, Series
-from pandas.api.types import is_datetime64_any_dtype
+from cuml.metrics import argmax, argmin
+from cuml.common.input_utils import cuml_io
+from cuml.common_imports import *
+
 from pandas_ta import Imports
-
 
 def _camelCase2Title(x: str):
     """https://stackoverflow.com/questions/5020906/python-convert-camel-case-to-space-delimited-using-regex-and-taking-acronyms-in"""
@@ -34,9 +36,9 @@ def get_offset(x: int) -> int:
     return int(x) if isinstance(x, int) else 0
 
 
-def is_datetime_ordered(df: DataFrame or Series) -> bool:
+def is_datetime_ordered(df: cudf.DataFrame or cudf.Series) -> bool:
     """Returns True if the index is a datetime and ordered."""
-    index_is_datetime = is_datetime64_any_dtype(df.index)
+    index_is_datetime = cuml_io.is_datetime(df.index)
     try:
         ordered = df.index[0] < df.index[-1]
     except RuntimeWarning:
@@ -51,7 +53,7 @@ def is_percent(x: int or float) -> bool:
     return False
 
 
-def non_zero_range(high: Series, low: Series) -> Series:
+def non_zero_range(high: cudf.Series, low: cudf.Series) -> cudf.Series:
     """Returns the difference of two series and adds epsilon to any zero values.  This occurs commonly in crypto data when 'high' = 'low'."""
     diff = high - low
     if diff.eq(0).any().any():
@@ -67,7 +69,7 @@ def recent_minimum_index(x):
     return int(argmin(x[::-1]))
 
 
-def signed_series(series: Series, initial: int = None) -> Series:
+def signed_series(series: cudf.Series, initial: int = None) -> cudf.Series:
     """Returns a Signed Series with or without an initial value
 
     Default Example:
@@ -100,7 +102,7 @@ def tal_ma(name: str) -> int:
     return 0 # Default: SMA -> 0
 
 
-def unsigned_differences(series: Series, amount: int = None, **kwargs) -> Series:
+def unsigned_differences(series: cudf.Series, amount: int = None, **kwargs) -> cudf.Series:
     """Unsigned Differences
     Returns two Series, an unsigned positive and unsigned negative series based
     on the differences of the original series. The positive series are only the
@@ -129,8 +131,8 @@ def unsigned_differences(series: Series, amount: int = None, **kwargs) -> Series
     return positive, negative
 
 
-def verify_series(series: Series, min_length: int = None) -> Series:
-    """If a Pandas Series and it meets the min_length of the indicator return it."""
+def verify_series(series: cudf.Series, min_length: int = None) -> cudf.Series:
+    """If a CuDF Series and it meets the min_length of the indicator return it."""
     has_length = min_length is not None and isinstance(min_length, int)
-    if series is not None and isinstance(series, Series):
+    if series is not None and isinstance(series, cudf.Series):
         return None if has_length and series.size < min_length else series

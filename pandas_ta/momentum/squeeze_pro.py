@@ -1,10 +1,9 @@
+```python
 # -*- coding: utf-8 -*-
-from numpy import NaN as npNaN
-from pandas import DataFrame
-from pandas_ta.momentum import mom
-from pandas_ta.overlap import ema, sma
-from pandas_ta.trend import decreasing, increasing
-from pandas_ta.volatility import bbands, kc
+from cudf import DataFrame, Series
+import cupy as cp
+from cusignal.tsfuncs import ema, sma, mom, decreasing, increasing
+from cusignal.ta.volatility import bbands, kc
 from pandas_ta.utils import get_offset
 from pandas_ta.utils import unsigned_differences, verify_series
 
@@ -121,15 +120,15 @@ def squeeze_pro(high, low, close, bb_length=None, bb_std=None, kc_length=None, k
         neg_dec *= squeeze
         neg_inc *= squeeze
 
-        pos_inc.replace(0, npNaN, inplace=True)
-        pos_dec.replace(0, npNaN, inplace=True)
-        neg_dec.replace(0, npNaN, inplace=True)
-        neg_inc.replace(0, npNaN, inplace=True)
+        pos_inc.replace(0, cp.nan, inplace=True)
+        pos_dec.replace(0, cp.nan, inplace=True)
+        neg_dec.replace(0, cp.nan, inplace=True)
+        neg_inc.replace(0, cp.nan, inplace=True)
 
         sqz_inc = squeeze * increasing(squeeze)
         sqz_dec = squeeze * decreasing(squeeze)
-        sqz_inc.replace(0, npNaN, inplace=True)
-        sqz_dec.replace(0, npNaN, inplace=True)
+        sqz_inc.replace(0, cp.nan, inplace=True)
+        sqz_dec.replace(0, cp.nan, inplace=True)
 
         # Handle fills
         if "fillna" in kwargs:
@@ -230,3 +229,4 @@ Returns:
     pd.DataFrame: SQZPRO, SQZPRO_ON_WIDE, SQZPRO_ON_NORMAL, SQZPRO_ON_NARROW, SQZPRO_OFF_WIDE, SQZPRO_NO columns by default. More
         detailed columns if 'detailed' kwarg is True.
 """
+```

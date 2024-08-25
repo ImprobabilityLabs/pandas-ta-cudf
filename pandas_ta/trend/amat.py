@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
-from pandas import DataFrame
+import cudf
+from cucim.ta.overlap import ma
+from cucim.ta.utils import get_offset, verify_series
 from .long_run import long_run
 from .short_run import short_run
-from pandas_ta.overlap import ma
-from pandas_ta.utils import get_offset, verify_series
-
 
 def amat(close=None, fast=None, slow=None, lookback=None, mamode=None, offset=None, **kwargs):
     """Indicator: Archer Moving Averages Trends (AMAT)"""
@@ -19,7 +18,7 @@ def amat(close=None, fast=None, slow=None, lookback=None, mamode=None, offset=No
 
     if close is None: return
 
-    # # Calculate Result
+    # Calculate Result
     fast_ma = ma(mamode, close, length=fast, **kwargs)
     slow_ma = ma(mamode, close, length=slow, **kwargs)
 
@@ -31,7 +30,7 @@ def amat(close=None, fast=None, slow=None, lookback=None, mamode=None, offset=No
         mas_long = mas_long.shift(offset)
         mas_short = mas_short.shift(offset)
 
-    # # Handle fills
+    # Handle fills
     if "fillna" in kwargs:
         mas_long.fillna(kwargs["fillna"], inplace=True)
         mas_short.fillna(kwargs["fillna"], inplace=True)
@@ -41,7 +40,7 @@ def amat(close=None, fast=None, slow=None, lookback=None, mamode=None, offset=No
         mas_short.fillna(method=kwargs["fill_method"], inplace=True)
 
     # Prepare DataFrame to return
-    amatdf = DataFrame({
+    amatdf = cudf.DataFrame({
         f"AMAT{mamode[0]}_LR_{fast}_{slow}_{lookback}": mas_long,
         f"AMAT{mamode[0]}_SR_{fast}_{slow}_{lookback}": mas_short
     })

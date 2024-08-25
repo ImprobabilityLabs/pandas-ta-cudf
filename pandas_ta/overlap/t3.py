@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
+import cudf
 from .ema import ema
 from pandas_ta import Imports
 from pandas_ta.utils import get_offset, verify_series
-
 
 def t3(close, length=None, a=None, talib=None, offset=None, **kwargs):
     """Indicator: T3"""
@@ -14,6 +14,9 @@ def t3(close, length=None, a=None, talib=None, offset=None, **kwargs):
     mode_tal = bool(talib) if isinstance(talib, bool) else True
 
     if close is None: return
+
+    # Convert to CuDF
+    close = cudf.Series(close)
 
     # Calculate Result
     if Imports["talib"] and mode_tal:
@@ -48,7 +51,6 @@ def t3(close, length=None, a=None, talib=None, offset=None, **kwargs):
     t3.category = "overlap"
 
     return t3
-
 
 t3.__doc__ = """Tim Tillson's T3 Moving Average (T3)
 
@@ -89,5 +91,4 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
-"""
+    pd.Series: New feature generated."""

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from pandas import DataFrame
+import cudf
 from pandas_ta import Imports, RATE, version
 # from .._core import _camelCase2Title
 # from .._time import ytd_df
@@ -32,10 +32,11 @@ def av(ticker: str, **kwargs):
             if verbose:
                 print("\n====  Chart History       " + div + f"\n[*] Pandas TA v{version} & alphaVantage-api")
                 print(f"[+] Downloading {ticker}[{interval}:{period}] from {av.API_NAME} (https://www.alphavantage.co/)")
-            df = av.data(ticker, interval)
+            cupy_df = av.data(ticker, interval)
+            df = cudf.DataFrame.from_pandas(cupy_df)
             df.name = ticker
             if show is not None and isinstance(show, int) and show > 0:
                 print(f"\n{df.name}\n{df.tail(show)}\n")
             return df
 
-    return DataFrame()
+    return cudf.DataFrame()

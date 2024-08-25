@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
-from pandas import DataFrame
+import cudf
 from pandas_ta.utils import get_offset, verify_series
-
 
 def donchian(high, low, lower_length=None, upper_length=None, offset=None, **kwargs):
     """Indicator: Donchian Channels (DC)"""
@@ -18,8 +17,8 @@ def donchian(high, low, lower_length=None, upper_length=None, offset=None, **kwa
     if high is None or low is None: return
 
     # Calculate Result
-    lower = low.rolling(lower_length, min_periods=lower_min_periods).min()
-    upper = high.rolling(upper_length, min_periods=upper_min_periods).max()
+    lower = low.rolling(window=lower_length, min_periods=lower_min_periods).min()
+    upper = high.rolling(window=upper_length, min_periods=upper_min_periods).max()
     mid = 0.5 * (lower + upper)
 
     # Handle fills
@@ -46,15 +45,15 @@ def donchian(high, low, lower_length=None, upper_length=None, offset=None, **kwa
 
     # Prepare DataFrame to return
     data = {lower.name: lower, mid.name: mid, upper.name: upper}
-    dcdf = DataFrame(data)
+    dcdf = cudf.DataFrame(data)
     dcdf.name = f"DC_{lower_length}_{upper_length}"
     dcdf.category = mid.category
 
     return dcdf
 
 
-donchian.__doc__ = \
-"""Donchian Channels (DC)
+donchian.__doc__ = """
+Donchian Channels (DC)
 
 Donchian Channels are used to measure volatility, similar to
 Bollinger Bands and Keltner Channels.
@@ -70,8 +69,8 @@ Calculation:
     MID = 0.5 * (LOWER + UPPER)
 
 Args:
-    high (pd.Series): Series of 'high's
-    low (pd.Series): Series of 'low's
+    high (pd.Series or cudf.Series): Series of 'high's
+    low (pd.Series or cudf.Series): Series of 'low's
     lower_length (int): The short period. Default: 20
     upper_length (int): The short period. Default: 20
     offset (int): How many periods to offset the result. Default: 0
@@ -81,5 +80,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.DataFrame: lower, mid, upper columns.
+    cudf.DataFrame: lower, mid, upper columns.
 """

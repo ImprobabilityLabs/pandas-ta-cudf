@@ -1,8 +1,11 @@
+```python
 # -*- coding: utf-8 -*-
-from .sma import sma
+import cudf
 from pandas_ta import Imports
 from pandas_ta.utils import get_offset, verify_series
 
+def sma_cu(x, length):
+    return x.rolling(length).mean()
 
 def trima(close, length=None, talib=None, offset=None, **kwargs):
     """Indicator: Triangular Moving Average (TRIMA)"""
@@ -15,13 +18,16 @@ def trima(close, length=None, talib=None, offset=None, **kwargs):
     if close is None: return
 
     # Calculate Result
+    if not isinstance(close, cudf.Series):
+        close = cudf.Series(close)
+
     if Imports["talib"] and mode_tal:
         from talib import TRIMA
-        trima = TRIMA(close, length)
+        trima = TRIMA(close.to_pandas(), length)
     else:
         half_length = round(0.5 * (length + 1))
-        sma1 = sma(close, length=half_length)
-        trima = sma(sma1, length=half_length)
+        sma1 = sma_cu(close, half_length)
+        trima = sma_cu(sma1, half_length)
 
     # Offset
     if offset != 0:
@@ -74,3 +80,4 @@ Kwargs:
 Returns:
     pd.Series: New feature generated.
 """
+```

@@ -1,7 +1,10 @@
+Here is the refactored code using CuDF and CUDA processing:
+
+```python
 # -*- coding: utf-8 -*-
+import cudf
 from pandas_ta.overlap import hl2, sma
 from pandas_ta.utils import get_drift, get_offset, non_zero_range, verify_series
-
 
 def eom(high, low, close, volume, length=None, divisor=None, drift=None, offset=None, **kwargs):
     """Indicator: Ease of Movement (EOM)"""
@@ -65,10 +68,10 @@ Calculation:
     EOM = SMA(eom, length)
 
 Args:
-    high (pd.Series): Series of 'high's
-    low (pd.Series): Series of 'low's
-    close (pd.Series): Series of 'close's
-    volume (pd.Series): Series of 'volume's
+    high (cudf.Series): Series of 'high's
+    low (cudf.Series): Series of 'low's
+    close (cudf.Series): Series of 'close's
+    volume (cudf.Series): Series of 'volume's
     length (int): The short period. Default: 14
     drift (int): The diff period. Default: 1
     offset (int): How many periods to offset the result. Default: 0
@@ -78,5 +81,6 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cudf.Series: New feature generated.
 """
+```

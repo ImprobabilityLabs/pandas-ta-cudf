@@ -1,14 +1,15 @@
 # -*- coding: utf-8 -*-
+import cudf
 from .hlc3 import hlc3
 from pandas_ta.utils import get_offset, is_datetime_ordered, verify_series
 
 def vwap(high, low, close, volume, anchor=None, offset=None, **kwargs):
     """Indicator: Volume Weighted Average Price (VWAP)"""
     # Validate Arguments
-    high = verify_series(high)
-    low = verify_series(low)
-    close = verify_series(close)
-    volume = verify_series(volume)
+    high = verify_series(cudf.Series(high))
+    low = verify_series(cudf.Series(low))
+    close = verify_series(cudf.Series(close))
+    volume = verify_series(cudf.Series(volume))
     anchor = anchor.upper() if anchor and isinstance(anchor, str) and len(anchor) >= 1 else "D"
     offset = get_offset(offset)
 
@@ -58,10 +59,10 @@ Calculation:
     VWAP = tpv.cumsum() / volume.cumsum()
 
 Args:
-    high (pd.Series): Series of 'high's
-    low (pd.Series): Series of 'low's
-    close (pd.Series): Series of 'close's
-    volume (pd.Series): Series of 'volume's
+    high (pd.Series or cudf.Series): Series of 'high's
+    low (pd.Series or cudf.Series): Series of 'low's
+    close (pd.Series or cudf.Series): Series of 'close's
+    volume (pd.Series or cudf.Series): Series of 'volume's
     anchor (str): How to anchor VWAP. Depending on the index values, it will
         implement various Timeseries Offset Aliases as listed here:
         https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timeseries-offset-aliases
@@ -73,5 +74,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cudf.Series: New feature generated.
 """

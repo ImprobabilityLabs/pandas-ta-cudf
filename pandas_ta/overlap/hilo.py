@@ -1,9 +1,9 @@
-# -*- coding: utf-8 -*-
-from numpy import nan as npNaN
-from pandas import DataFrame, Series
+import cudf
+from cuml.tsa import ExponentialMovingAverage as EMA
+from cuml.tsa import SimpleMovingAverage as SMA
+from cuml.tsa import HullMovingAverage as HMA
 from .ma import ma
 from pandas_ta.utils import get_offset, verify_series
-
 
 def hilo(high, low, close, high_length=None, low_length=None, mamode=None, offset=None, **kwargs):
     """Indicator: Gann HiLo (HiLo)"""
@@ -21,12 +21,19 @@ def hilo(high, low, close, high_length=None, low_length=None, mamode=None, offse
 
     # Calculate Result
     m = close.size
-    hilo = Series(npNaN, index=close.index)
-    long = Series(npNaN, index=close.index)
-    short = Series(npNaN, index=close.index)
+    hilo = cudf.Series([float('nan')] * m, index=close.index)
+    long = cudf.Series([float('nan')] * m, index=close.index)
+    short = cudf.Series([float('nan')] * m, index=close.index)
 
-    high_ma = ma(mamode, high, length=high_length)
-    low_ma = ma(mamode, low, length=low_length)
+    if mamode == "sma":
+        high_ma = SMA(input_array=high, window=high_length)
+        low_ma = SMA(input_array=low, window=low_length)
+    elif mamode == "ema":
+        high_ma = EMA(input_array=high, window=high_length)
+        low_ma = EMA(input_array=low, window=low_length)
+    elif mamode == "hma":
+        high_ma = HMA(input_array=high, window=high_length)
+        low_ma = HMA(input_array=low, window=low_length)
 
     for i in range(1, m):
         if close.iloc[i] > high_ma.iloc[i - 1]:
@@ -56,7 +63,7 @@ def hilo(high, low, close, high_length=None, low_length=None, mamode=None, offse
     # Name & Category
     _props = f"_{high_length}_{low_length}"
     data = {f"HILO{_props}": hilo, f"HILOl{_props}": long, f"HILOs{_props}": short}
-    df = DataFrame(data, index=close.index)
+    df = cudf.DataFrame(data, index=close.index)
 
     df.name = f"HILO{_props}"
     df.category = "overlap"

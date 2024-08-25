@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import cudf
 from pandas_ta import Imports
 from pandas_ta.utils import get_offset, non_zero_range, verify_series
 
@@ -6,10 +7,10 @@ from pandas_ta.utils import get_offset, non_zero_range, verify_series
 def bop(open_, high, low, close, scalar=None, talib=None, offset=None, **kwargs):
     """Indicator: Balance of Power (BOP)"""
     # Validate Arguments
-    open_ = verify_series(open_)
-    high = verify_series(high)
-    low = verify_series(low)
-    close = verify_series(close)
+    open_ = verify_series(cudf.Series(open_))
+    high = verify_series(cudf.Series(high))
+    low = verify_series(cudf.Series(low))
+    close = verify_series(cudf.Series(close))
     scalar = float(scalar) if scalar else 1
     offset = get_offset(offset)
     mode_tal = bool(talib) if isinstance(talib, bool) else True
@@ -17,7 +18,7 @@ def bop(open_, high, low, close, scalar=None, talib=None, offset=None, **kwargs)
     # Calculate Result
     if Imports["talib"] and mode_tal:
         from talib import BOP
-        bop = BOP(open_, high, low, close)
+        bop = cudf.Series(BOP(open_.to_pandas(), high.to_pandas(), low.to_pandas(), close.to_pandas()))
     else:
         high_low_range = non_zero_range(high, low)
         close_open_range = non_zero_range(close, open_)

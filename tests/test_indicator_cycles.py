@@ -1,17 +1,17 @@
 from .config import error_analysis, sample_data, CORRELATION, CORRELATION_THRESHOLD, VERBOSE
-from .context import pandas_ta
+from .context import cudf_ta
 
 from unittest import TestCase, skip
-import pandas.testing as pdt
-from pandas import DataFrame, Series
+import cudf.testing as cdt
+from cudf import DataFrame, Series
 
-import talib as tal
+import cudf ascdf
 
 
 class TestCycles(TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.data = sample_data
+        cls.data = cudf.from_pandas(sample_data)
         cls.data.columns = cls.data.columns.str.lower()
         cls.open = cls.data["open"]
         cls.high = cls.data["high"]
@@ -35,6 +35,6 @@ class TestCycles(TestCase):
 
 
     def test_ebsw(self):
-        result = pandas_ta.ebsw(self.close)
+        result = cudf_ta.ebsw(self.close)
         self.assertIsInstance(result, Series)
         self.assertEqual(result.name, "EBSW_40_10")

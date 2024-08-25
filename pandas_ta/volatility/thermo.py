@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from pandas import DataFrame
+import cudf
 from pandas_ta.overlap import ma
 from pandas_ta.utils import get_offset, verify_series, get_drift
 
@@ -20,6 +20,7 @@ def thermo(high, low, length=None, long=None, short=None, mamode=None, drift=Non
     if high is None or low is None: return
 
     # Calculate Result
+    high, low = high.to_cudf(), low.to_cudf()
     thermoL = (low.shift(drift) - low).abs()
     thermoH = (high - high.shift(drift)).abs()
 
@@ -73,7 +74,7 @@ def thermo(high, low, length=None, long=None, short=None, mamode=None, drift=Non
         thermo_long.name: thermo_long,
         thermo_short.name: thermo_short
     }
-    df = DataFrame(data)
+    df = cudf.DataFrame(data)
     df.name = f"THERMO{_props}"
     df.category = thermo.category
 

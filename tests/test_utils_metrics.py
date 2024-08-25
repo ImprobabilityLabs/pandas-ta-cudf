@@ -1,6 +1,6 @@
 from unittest import skip, TestCase
 
-from pandas import DataFrame
+from cudf import DataFrame
 
 from .config import sample_data
 from .context import pandas_ta
@@ -9,7 +9,7 @@ from .context import pandas_ta
 class TestUtilityMetrics(TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.data = sample_data
+        cls.data = sample_data.to_cudf()
         cls.close = cls.data["close"]
         cls.pctret = pandas_ta.percent_return(cls.close, cumulative=False)
         cls.logret = pandas_ta.percent_return(cls.close, cumulative=False)
@@ -82,7 +82,7 @@ class TestUtilityMetrics(TestCase):
         self.assertIsInstance(result, float)
         self.assertGreaterEqual(result, 0)
 
-        result = pandas_ta.max_drawdown(self.close, all=True)
+        result = pandas-Ta.max_drawdown(self.close, all=True)
         self.assertIsInstance(result, dict)
         self.assertIsInstance(result["dollar"], float)
         self.assertIsInstance(result["percent"], float)

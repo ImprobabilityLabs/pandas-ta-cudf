@@ -1,14 +1,22 @@
 # -*- coding: utf-8 -*-
-from pandas_ta.overlap import sma
-from pandas_ta.utils import get_offset, verify_series
+import cudf
+from pandas_ta.overlap import sma as pd_sma
+from pandas_ta.utils import get_offset, verify_series as pd_verify_series
 
-# - Standard definition of your custom indicator function (including docs)-
+# - Standard definition of your custom indicator function (including docs) -
+
+def sma(close, length):
+    return cudf.Series(close).rolling(window=length).mean()
+
+def verify_series(close, length):
+    return cudf.Series(close)
 
 def ni(close, length=None, centered=False, offset=None, **kwargs):
     """
     Example indicator ni
     """
     # Validate Arguments
+    close = cudf.Series(close)
     length = int(length) if length and length > 0 else 20
     close = verify_series(close, length)
     offset = get_offset(offset)
@@ -58,17 +66,17 @@ Calculation:
         ni = ni.shift(-t)
 
 Args:
-    close (pd.Series): Series of 'close's
+    close (cuDF.Series): Series of 'close's
     length (int): It's period. Default: 20
     centered (bool): Shift the ni back by int(0.5 * length) + 1. Default: False
     offset (int): How many periods to offset the result. Default: 0
 
 Kwargs:
-    fillna (value, optional): pd.DataFrame.fillna(value)
+    fillna (value, optional): cuDF.Series.fillna(value)
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cuDF.Series: New feature generated.
 """
 
 # - Define a matching class method --------------------------------------------

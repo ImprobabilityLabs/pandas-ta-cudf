@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import cudf
+from cudf.utils import cudautils
 from pandas_ta.utils import get_offset, verify_series
 
 
@@ -12,8 +14,11 @@ def rma(close, length=None, offset=None, **kwargs):
 
     if close is None: return
 
+    # Convert to cuDF Series
+    close_gpu = cudf.Series(close)
+
     # Calculate Result
-    rma = close.ewm(alpha=alpha, min_periods=length).mean()
+    rma = close_gpu.ewm(alpha=alpha, min_periods=length).mean()
 
     # Offset
     if offset != 0:

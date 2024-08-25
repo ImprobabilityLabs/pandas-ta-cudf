@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-from pandas_ta.utils import get_offset, verify_series
-
+import cudf
+from cudf.utils import get_offset, verify_series
 
 def hl2(high, low, offset=None, **kwargs):
     """Indicator: HL2 """

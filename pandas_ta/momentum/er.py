@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-from pandas import DataFrame, concat
-from pandas_ta.utils import get_drift, get_offset, verify_series, signals
+import cudf
+from cudf_ta.utils import get_drift, get_offset, verify_series, signals
 
 
 def er(close, length=None, drift=None, offset=None, **kwargs):
@@ -36,9 +36,9 @@ def er(close, length=None, drift=None, offset=None, **kwargs):
 
     signal_indicators = kwargs.pop("signal_indicators", False)
     if signal_indicators:
-        signalsdf = concat(
+        signalsdf = cudf.concat(
             [
-                DataFrame({er.name: er}),
+                cudf.DataFrame({er.name: er}),
                 signals(
                     indicator=er,
                     xa=kwargs.pop("xa", 80),
@@ -80,7 +80,7 @@ Calculation:
     ER = abs_diff / SUM(volatility, length)
 
 Args:
-    close (pd.Series): Series of 'close's
+    close (cudf.Series): Series of 'close's
     length (int): It's period. Default: 1
     offset (int): How many periods to offset the result. Default: 0
 
@@ -89,5 +89,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cudf.Series: New feature generated.
 """

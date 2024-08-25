@@ -1,20 +1,24 @@
 # -*- coding: utf-8 -*-
-from numpy import nan as npNaN
-from pandas import Series
-from pandas_ta.utils import get_drift, get_offset, verify_series
-
+import cudf
+from cuml.utils import get_dtype
+from pandas import nan as npNaN
+from cuml.metrics import churned as gpu_churned
+from cuml.dask.common import get_client
+from cuda import cuda, void_pp
+from numba import cuda as nb_cuda
+from numba.cuda import cudaletic
 
 def vidya(close, length=None, drift=None, offset=None, **kwargs):
     """Indicator: Variable Index Dynamic Average (VIDYA)"""
     # Validate Arguments
     length = int(length) if length and length > 0 else 14
-    close = verify_series(close, length)
+    close = cudf.Series(close)
     drift = get_drift(drift)
     offset = get_offset(offset)
 
     if close is None: return
 
-    def _cmo(source: Series, n:int , d: int):
+    def _cmo(source: cudf.Series, n:int , d: int):
         """Chande Momentum Oscillator (CMO) Patch
         For some reason: from pandas_ta.momentum import cmo causes
         pandas_ta.momentum.coppock to not be able to import it's
@@ -32,7 +36,7 @@ def vidya(close, length=None, drift=None, offset=None, **kwargs):
     m = close.size
     alpha = 2 / (length + 1)
     abs_cmo = _cmo(close, length, drift).abs()
-    vidya = Series(0, index=close.index)
+    vidya = cudf.Series(0, index=close.index)
     for i in range(length, m):
         vidya.iloc[i] = alpha * abs_cmo.iloc[i] * close.iloc[i] + vidya.iloc[i - 1] * (1 - alpha * abs_cmo.iloc[i])
     vidya.replace({0: npNaN}, inplace=True)

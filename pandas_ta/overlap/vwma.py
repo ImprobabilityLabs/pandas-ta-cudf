@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
-from .sma import sma
-from pandas_ta.utils import get_offset, verify_series
+import cudf
+from .sma import sma_cuda as sma
+from pandas_ta.utils import get_offset, verify_series_cuda as verify_series
 
 
 def vwma(close, volume, length=None, offset=None, **kwargs):
@@ -50,8 +51,8 @@ Calculation:
     VWMA = SMA(pv, length) / SMA(volume, length)
 
 Args:
-    close (pd.Series): Series of 'close's
-    volume (pd.Series): Series of 'volume's
+    close (cuDF.Series): Series of 'close's
+    volume (cuDF.Series): Series of 'volume's
     length (int): It's period. Default: 10
     offset (int): How many periods to offset the result. Default: 0
 
@@ -60,5 +61,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cuDF.Series: New feature generated.
 """

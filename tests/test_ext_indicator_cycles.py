@@ -1,15 +1,14 @@
-from pandas.core.series import Series
+from cudf.core.series import Series
 from .config import sample_data
 from .context import pandas_ta
+import cudf
 
 from unittest import TestCase
-from pandas import DataFrame
-
 
 class TestCylesExtension(TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.data = sample_data
+        cls.data = cudf.DataFrame.from_pandas(sample_data)
 
     @classmethod
     def tearDownClass(cls):
@@ -21,5 +20,5 @@ class TestCylesExtension(TestCase):
 
     def test_ebsw_ext(self):
         self.data.ta.ebsw(append=True)
-        self.assertIsInstance(self.data, DataFrame)
+        self.assertIsInstance(self.data, cudf.DataFrame)
         self.assertEqual(self.data.columns[-1], "EBSW_40_10")

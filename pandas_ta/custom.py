@@ -1,3 +1,4 @@
+```python
 # -*- coding: utf-8 -*-
 import importlib
 import os
@@ -7,6 +8,7 @@ import types
 from os.path import abspath, join, exists, basename, splitext
 from glob import glob
 
+import cudf
 import pandas_ta
 from pandas_ta import AnalysisIndicators
 
@@ -151,7 +153,7 @@ https://github.com/twopirllc/pandas-ta/issues/355.
 A brief example of usage:
 
 1. Loading the 'ta' module:
->>> import pandas as pd
+>>> import cudf as pd
 >>> import pandas_ta as ta
 
 2. Create an empty directory on your machine where you want to work with your
@@ -197,7 +199,7 @@ designated indicators directory like this:
 
 >>> import_dir(ta_dir)
 
-If your custom indicator(s) loaded succesfully then it should behave exactly
+If your custom indicator(s) loaded successfully then it should behave exactly
 like all other native indicators in pandas_ta, including help functions.
 """
 
@@ -224,3 +226,4 @@ def load_indicator_module(name):
     # reload to refresh previously loaded module
     module = importlib.reload(module)
     return get_module_functions(module)
+```

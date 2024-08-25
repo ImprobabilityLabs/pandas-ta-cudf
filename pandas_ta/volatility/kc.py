@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-from pandas import DataFrame
-from .true_range import true_range
+import cudf
+from cucim import true_range
 from pandas_ta.overlap import ma
 from pandas_ta.utils import get_offset, high_low_range, verify_series
 
@@ -56,7 +56,7 @@ def kc(high, low, close, length=None, scalar=None, mamode=None, offset=None, **k
 
     # Prepare DataFrame to return
     data = {lower.name: lower, basis.name: basis, upper.name: upper}
-    kcdf = DataFrame(data)
+    kcdf = cudf.DataFrame(data)
     kcdf.name = f"KC{_props}"
     kcdf.category = basis.category
 

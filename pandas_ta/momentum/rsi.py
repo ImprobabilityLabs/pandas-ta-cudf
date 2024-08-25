@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
-from pandas import DataFrame, concat
+import cudf
 from pandas_ta import Imports
 from pandas_ta.overlap import rma
 from pandas_ta.utils import get_drift, get_offset, verify_series, signals
-
 
 def rsi(close, length=None, scalar=None, talib=None, drift=None, offset=None, **kwargs):
     """Indicator: Relative Strength Index (RSI)"""
@@ -20,9 +19,11 @@ def rsi(close, length=None, scalar=None, talib=None, drift=None, offset=None, **
     # Calculate Result
     if Imports["talib"] and mode_tal:
         from talib import RSI
-        rsi = RSI(close, length)
+        rsi = RSI(close.to_pandas(), length)
+        rsi = cudf.Series(rsi, index=close.index)
     else:
-        negative = close.diff(drift)
+        close = cudf.DataFrame({'close': close})
+        negative = close['close'].diff(drift)
         positive = negative.copy()
 
         positive[positive < 0] = 0  # Make negatives 0 for the postive series
@@ -49,9 +50,9 @@ def rsi(close, length=None, scalar=None, talib=None, drift=None, offset=None, **
 
     signal_indicators = kwargs.pop("signal_indicators", False)
     if signal_indicators:
-        signalsdf = concat(
+        signalsdf = cudf.concat(
             [
-                DataFrame({rsi.name: rsi}),
+                cudf.DataFrame({rsi.name: rsi}),
                 signals(
                     indicator=rsi,
                     xa=kwargs.pop("xa", 80),
@@ -70,7 +71,6 @@ def rsi(close, length=None, scalar=None, talib=None, drift=None, offset=None, **
         return signalsdf
     else:
         return rsi
-
 
 rsi.__doc__ = \
 """Relative Strength Index (RSI)

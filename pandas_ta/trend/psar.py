@@ -1,8 +1,7 @@
-# -*- coding: utf-8 -*-
-from numpy import nan as npNaN
-from pandas import DataFrame, Series
+import cudf
+from cuml.utils import get_cuda_ver
 from pandas_ta.utils import get_offset, verify_series, zero
-
+import numpy as np
 
 def psar(high, low, close=None, af0=None, af=None, max_af=None, offset=None, **kwargs):
     """Indicator: Parabolic Stop and Reverse (PSAR)"""
@@ -14,7 +13,7 @@ def psar(high, low, close=None, af0=None, af=None, max_af=None, offset=None, **k
     max_af = float(max_af) if max_af and max_af > 0 else 0.2
     offset = get_offset(offset)
 
-    def _falling(high, low, drift:int=1):
+    def _falling(high, low, drift: int = 1):
         """Returns the last -DM value"""
         # Not to be confused with ta.falling()
         up = high - high.shift(drift)
@@ -35,14 +34,14 @@ def psar(high, low, close=None, af0=None, af=None, max_af=None, offset=None, **k
         close = verify_series(close)
         sar = close.iloc[0]
 
-    long = Series(npNaN, index=high.index)
+    long = cudf.Series([np.nan] * len(high), index=high.index)
     short = long.copy()
-    reversal = Series(0, index=high.index)
+    reversal = cudf.Series([0] * len(high), index=high.index)
     _af = long.copy()
     _af.iloc[0:2] = af0
 
     # Calculate Result
-    m = high.shape[0]
+    m = len(high)
     for row in range(1, m):
         high_ = high.iloc[row]
         low_ = low.iloc[row]
@@ -69,10 +68,10 @@ def psar(high, low, close=None, af0=None, af=None, max_af=None, offset=None, **k
         if reverse:
             _sar = ep
             af = af0
-            falling = not falling # Must come before next line
+            falling = not falling  # Must come before next line
             ep = low_ if falling else high_
 
-        sar = _sar # Update SAR
+        sar = _sar  # Update SAR
 
         # Seperate long/short sar based on falling
         if falling:
@@ -110,12 +109,11 @@ def psar(high, low, close=None, af0=None, af=None, max_af=None, offset=None, **k
         f"PSARaf{_params}": _af,
         f"PSARr{_params}": reversal,
     }
-    psardf = DataFrame(data)
+    psardf = cudf.DataFrame(data)
     psardf.name = f"PSAR{_params}"
     psardf.category = long.category = short.category = "trend"
 
     return psardf
-
 
 psar.__doc__ = \
 """Parabolic Stop and Reverse (psar)

@@ -1,24 +1,28 @@
 # -*- coding: utf-8 -*-
-from numpy import log as nplog
-from pandas_ta.utils import get_offset, verify_series
+import cudf
+import cupy as cp
+from cuml.common.import_utils import has_scikit_learn
 
+cp_log = cp.log
+if has_scikit_learn():
+    from sklearn.preprocessing import cumsum
 
 def log_return(close, length=None, cumulative=None, offset=None, **kwargs):
     """Indicator: Log Return"""
     # Validate Arguments
     length = int(length) if length and length > 0 else 1
     cumulative = bool(cumulative) if cumulative is not None and cumulative else False
-    close = verify_series(close, length)
+    close = cudf.Series(close).to_gpu_array()
     offset = get_offset(offset)
 
     if close is None: return
 
     # Calculate Result
     if cumulative:
-        # log_return = nplog(close).diff(length).cumsum()
-        log_return = nplog(close / close.iloc[0])
+        # log_return = cp_log(close).diff(length).cumsum()
+        log_return = cp_log(close / close[0])
     else:
-        log_return = nplog(close / close.shift(length)) # nplog(close).diff(length)
+        log_return = cp_log(close / close.shift(length)) # cp_log(close).diff(length)
 
     # Offset
     if offset != 0:
@@ -53,15 +57,15 @@ Calculation:
     CUMLOGRET = LOGRET.cumsum() if cumulative
 
 Args:
-    close (pd.Series): Series of 'close's
+    close (cuDF.Series): Series of 'close's
     length (int): It's period. Default: 20
     cumulative (bool): If True, returns the cumulative returns. Default: False
     offset (int): How many periods to offset the result. Default: 0
 
 Kwargs:
-    fillna (value, optional): pd.DataFrame.fillna(value)
+    fillna (value, optional): cuDF.DataFrame.fillna(value)
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cuDF.Series: New feature generated.
 """

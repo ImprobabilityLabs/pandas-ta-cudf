@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
-from pandas import DataFrame
+import cudf
 from pandas_ta.utils import get_offset, verify_series
-
 
 def ha(open_, high, low, close, offset=None, **kwargs):
     """Candle Type: Heikin Ashi"""
@@ -12,16 +11,16 @@ def ha(open_, high, low, close, offset=None, **kwargs):
     close = verify_series(close)
     offset = get_offset(offset)
 
-    # Calculate Result
-    m = close.size
-    df = DataFrame({
-        "HA_open": 0.5 * (open_.iloc[0] + close.iloc[0]),
-        "HA_high": high,
-        "HA_low": low,
-        "HA_close": 0.25 * (open_ + high + low + close),
-    })
+    # Convert to CuDF DataFrame
+    df = cudf.DataFrame({'open': open_, 'high': high, 'low': low, 'close': close})
 
-    for i in range(1, m):
+    # Calculate Result
+    df["HA_open"] = 0.5 * (df['open'].iloc[0] + df['close'].iloc[0])
+    df["HA_high"] = df['high']
+    df["HA_low"] = df['low']
+    df["HA_close"] = 0.25 * (df['open'] + df['high'] + df['low'] + df['close'])
+
+    for i in range(1, len(df)):
         df["HA_open"][i] = 0.5 * (df["HA_open"][i - 1] + df["HA_close"][i - 1])
 
     df["HA_high"] = df[["HA_open", "HA_high", "HA_close"]].max(axis=1)
@@ -42,7 +41,6 @@ def ha(open_, high, low, close, offset=None, **kwargs):
     df.category = "candles"
 
     return df
-
 
 ha.__doc__ = \
 """Heikin Ashi Candles (HA)
@@ -80,15 +78,15 @@ Calculation:
     it is now possible to continue computing the HA candles per the formulas.
 ​​
 Args:
-    open_ (pd.Series): Series of 'open's
-    high (pd.Series): Series of 'high's
-    low (pd.Series): Series of 'low's
-    close (pd.Series): Series of 'close's
+    open_ (cu.Series): Series of 'open's
+    high (cu.Series): Series of 'high's
+    low (cu.Series): Series of 'low's
+    close (cu.Series): Series of 'close's
 
 Kwargs:
     fillna (value, optional): pd.DataFrame.fillna(value)
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.DataFrame: ha_open, ha_high,ha_low, ha_close columns.
+    cu.DataFrame: ha_open, ha_high,ha_low, ha_close columns.
 """

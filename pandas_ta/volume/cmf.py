@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
+import cudf
 from pandas_ta.utils import get_offset, non_zero_range, verify_series
-
 
 def cmf(high, low, close, volume, open_=None, length=None, offset=None, **kwargs):
     """Indicator: Chaikin Money Flow (CMF)"""
@@ -23,9 +23,9 @@ def cmf(high, low, close, volume, open_=None, length=None, offset=None, **kwargs
     else:
         ad = 2 * close - (high + low)  # AD with High, Low, Close
 
-    ad *= volume / non_zero_range(high, low)
-    cmf = ad.rolling(length, min_periods=min_periods).sum()
-    cmf /= volume.rolling(length, min_periods=min_periods).sum()
+    ad = ad * volume / non_zero_range(high, low)
+    cmf = ad.rolling(window=length, min_periods=min_periods).sum()
+    cmf /= volume.rolling(window=length, min_periods=min_periods).sum()
 
     # Offset
     if offset != 0:
@@ -67,18 +67,18 @@ Calculation:
     CMF = SUM(ad, length) / SUM(volume, length)
 
 Args:
-    high (pd.Series): Series of 'high's
-    low (pd.Series): Series of 'low's
-    close (pd.Series): Series of 'close's
-    volume (pd.Series): Series of 'volume's
-    open_ (pd.Series): Series of 'open's. Default: None
+    high (cuDF.Series): Series of 'high's
+    low (cuDF.Series): Series of 'low's
+    close (cuDF.Series): Series of 'close's
+    volume (cuDF.Series): Series of 'volume's
+    open_ (cuDF.Series): Series of 'open's. Default: None
     length (int): The short period. Default: 20
     offset (int): How many periods to offset the result. Default: 0
 
 Kwargs:
-    fillna (value, optional): pd.DataFrame.fillna(value)
+    fillna (value, optional): cuDF.DataFrame.fillna(value)
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cuDF.Series: New feature generated.
 """

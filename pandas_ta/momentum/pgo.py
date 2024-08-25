@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
+import cudf
 from pandas_ta.overlap import ema, sma
 from pandas_ta.volatility import atr
 from pandas_ta.utils import get_offset, verify_series
-
 
 def pgo(high, low, close, length=None, offset=None, **kwargs):
     """Indicator: Pretty Good Oscillator (PGO)"""
@@ -14,6 +14,11 @@ def pgo(high, low, close, length=None, offset=None, **kwargs):
     offset = get_offset(offset)
 
     if high is None or low is None or close is None: return
+
+    # Convert to cuDF DataFrames
+    high = cudf.DataFrame(high)
+    low = cudf.DataFrame(low)
+    close = cudf.DataFrame(close)
 
     # Calculate Result
     pgo = close - sma(close, length)
@@ -35,7 +40,6 @@ def pgo(high, low, close, length=None, offset=None, **kwargs):
 
     return pgo
 
-
 pgo.__doc__ = \
 """Pretty Good Oscillator (PGO)
 
@@ -56,16 +60,16 @@ Calculation:
     PGO = (close - SMA(close, length)) / EMA(ATR(high, low, close, length), length)
 
 Args:
-    high (pd.Series): Series of 'high's
-    low (pd.Series): Series of 'low's
-    close (pd.Series): Series of 'close's
+    high (cuDF.Series): Series of 'high's
+    low (cuDF.Series): Series of 'low's
+    close (cuDF.Series): Series of 'close's
     length (int): It's period. Default: 14
     offset (int): How many periods to offset the result. Default: 0
 
 Kwargs:
-    fillna (value, optional): pd.DataFrame.fillna(value)
+    fillna (value, optional): cuDF.DataFrame.fillna(value)
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cuDF.Series: New feature generated.
 """

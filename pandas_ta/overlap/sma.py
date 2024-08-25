@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
+import cudf
 from pandas_ta import Imports
 from pandas_ta.utils import get_offset, verify_series
-
 
 def sma(close, length=None, talib=None, offset=None, **kwargs):
     """Indicator: Simple Moving Average (SMA)"""
@@ -9,6 +9,8 @@ def sma(close, length=None, talib=None, offset=None, **kwargs):
     length = int(length) if length and length > 0 else 10
     min_periods = int(kwargs["min_periods"]) if "min_periods" in kwargs and kwargs["min_periods"] is not None else length
     close = verify_series(close, max(length, min_periods))
+    if isinstance(close, pd.Series):
+        close = cudf.Series.from_pandas(close)
     offset = get_offset(offset)
     mode_tal = bool(talib) if isinstance(talib, bool) else True
 
@@ -17,9 +19,10 @@ def sma(close, length=None, talib=None, offset=None, **kwargs):
     # Calculate Result
     if Imports["talib"] and mode_tal:
         from talib import SMA
-        sma = SMA(close, length)
+        sma = SMA(close.to_pandas(), length)
+        sma = cudf.Series(sma)
     else:
-        sma = close.rolling(length, min_periods=min_periods).mean()
+        sma = close.rolling(window=length, min_periods=min_periods).mean()
 
     # Offset
     if offset != 0:
@@ -53,7 +56,7 @@ Calculation:
     SMA = SUM(close, length) / length
 
 Args:
-    close (pd.Series): Series of 'close's
+    close (pd.Series or cudf.Series): Series of 'close's
     length (int): It's period. Default: 10
     talib (bool): If TA Lib is installed and talib is True, Returns the TA Lib
         version. Default: True
@@ -66,5 +69,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cudf.Series: New feature generated.
 """

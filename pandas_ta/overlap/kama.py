@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-from numpy import nan as npNaN
-from pandas import Series
-from pandas_ta.utils import get_drift, get_offset, non_zero_range, verify_series
-
+import cucim
+from cuml.preprocessing.utils import get_drift, get_offset, non_zero_range, verify_series
+import cudf
+from cuml.metrics import rolling
 
 def kama(close, length=None, fast=None, slow=None, drift=None, offset=None, **kwargs):
     """Indicator: Kaufman's Adaptive Moving Average (KAMA)"""
@@ -25,17 +25,17 @@ def kama(close, length=None, fast=None, slow=None, drift=None, offset=None, **kw
 
     abs_diff = non_zero_range(close, close.shift(length)).abs()
     peer_diff = non_zero_range(close, close.shift(drift)).abs()
-    peer_diff_sum = peer_diff.rolling(length).sum()
+    peer_diff_sum = rolling.rolling_sum(peer_diff, length)
     er = abs_diff / peer_diff_sum
     x = er * (fr - sr) + sr
     sc = x * x
 
     m = close.size
-    result = [npNaN for _ in range(0, length - 1)] + [0]
+    result = [cucim.np.nan for _ in range(0, length - 1)] + [0]
     for i in range(length, m):
         result.append(sc.iloc[i] * close.iloc[i] + (1 - sc.iloc[i]) * result[i - 1])
 
-    kama = Series(result, index=close.index)
+    kama = cudf.Series(result, index=close.index)
 
     # Offset
     if offset != 0:

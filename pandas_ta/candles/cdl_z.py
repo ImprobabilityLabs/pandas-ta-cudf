@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from pandas import DataFrame
+import cudf
 from pandas_ta.statistics import zscore
 from pandas_ta.utils import get_offset, verify_series
 
@@ -22,6 +22,11 @@ def cdl_z(open_, high, low, close, length=None, full=None, ddof=None, offset=Non
     if full:
         length = close.size
 
+    open_ = cudf.Series(open_)
+    high = cudf.Series(high)
+    low = cudf.Series(low)
+    close = cudf.Series(close)
+
     z_open = zscore(open_, length=length, ddof=ddof)
     z_high = zscore(high, length=length, ddof=ddof)
     z_low = zscore(low, length=length, ddof=ddof)
@@ -29,7 +34,7 @@ def cdl_z(open_, high, low, close, length=None, full=None, ddof=None, offset=Non
 
     _full = "a" if full else ""
     _props = _full if full else f"_{length}_{ddof}"
-    df = DataFrame({
+    df = cudf.DataFrame({
         f"open_Z{_props}": z_open,
         f"high_Z{_props}": z_high,
         f"low_Z{_props}": z_low,
@@ -74,10 +79,10 @@ Calculation:
     close = Z(close, length, ddof)
 
 Args:
-    open_ (pd.Series): Series of 'open's
-    high (pd.Series): Series of 'high's
-    low (pd.Series): Series of 'low's
-    close (pd.Series): Series of 'close's
+    open_ (cu.Series): Series of 'open's
+    high (cu.Series): Series of 'high's
+    low (cu.Series): Series of 'low's
+    close (cu.Series): Series of 'close's
     length (int): The period. Default: 10
 
 Kwargs:
@@ -88,5 +93,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: CDL_DOJI column.
+    cu.Series: CDL_DOJI column.
 """

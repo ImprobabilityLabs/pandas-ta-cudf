@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
+import cudf
 from pandas_ta import Imports
 from pandas_ta.overlap import rma
 from pandas_ta.utils import get_drift, get_offset, verify_series
-
 
 def cmo(close, length=None, scalar=None, talib=None, drift=None, offset=None, **kwargs):
     """Indicator: Chande Momentum Oscillator (CMO)"""
@@ -29,8 +29,8 @@ def cmo(close, length=None, scalar=None, talib=None, drift=None, offset=None, **
             pos_ = rma(positive, length)
             neg_ = rma(negative, length)
         else:
-            pos_ = positive.rolling(length).sum()
-            neg_ = negative.rolling(length).sum()
+            pos_ = positive.rolling(window=length).sum()
+            neg_ = negative.rolling(window=length).sum()
 
         cmo = scalar * (pos_ - neg_) / (pos_ + neg_)
 
@@ -50,7 +50,6 @@ def cmo(close, length=None, scalar=None, talib=None, drift=None, offset=None, **
 
     return cmo
 
-
 cmo.__doc__ = \
 """Chande Momentum Oscillator (CMO)
 
@@ -69,7 +68,7 @@ Calculation:
     CMO = scalar * (PSUM - NSUM) / (PSUM + NSUM)
 
 Args:
-    close (pd.Series): Series of 'close's
+    close (cudf.Series): Series of 'close's
     scalar (float): How much to magnify. Default: 100
     talib (bool): If TA Lib is installed and talib is True, Returns the TA Lib
         version. If TA Lib is not installed but talib is True, it runs the Python
@@ -83,5 +82,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cudf.Series: New feature generated.
 """

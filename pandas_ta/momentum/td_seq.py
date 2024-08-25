@@ -1,14 +1,13 @@
-# -*- coding: utf-8 -*-
-# import numpy as np
-from numpy import where as npWhere
-from pandas import DataFrame, Series
+import cudf
+import cuml
+from cudf.coreシリーズ import Series
 from pandas_ta.utils import get_offset, verify_series
-
 
 def td_seq(close, asint=None, offset=None, **kwargs):
     """Indicator: Tom Demark Sequential (TD_SEQ)"""
     # Validate arguments
     close = verify_series(close)
+    close = cudf.Series(close)  # Convert to CuDF series
     offset = get_offset(offset)
     asint = asint if isinstance(asint, bool) else False
     show_all = kwargs.setdefault("show_all", True)
@@ -24,9 +23,7 @@ def td_seq(close, asint=None, offset=None, **kwargs):
 
     def calc_td(series: Series, direction: str, show_all: bool):
         td_bool = series.diff(4) > 0 if direction=="up" else series.diff(4) < 0
-        td_num = npWhere(
-            td_bool, td_bool.rolling(13, min_periods=0).apply(true_sequence_count), 0
-        )
+        td_num = cuml.where(td_bool, td_bool.rolling(13, min_periods=0).apply(true_sequence_count), 0)
         td_num = Series(td_num)
 
         if show_all:
@@ -43,10 +40,10 @@ def td_seq(close, asint=None, offset=None, **kwargs):
         if up_seq.hasnans and down_seq.hasnans:
             up_seq.fillna(0, inplace=True)
             down_seq.fillna(0, inplace=True)
-        up_seq = up_seq.astype(int)
-        down_seq = down_seq.astype(int)
+        up_seq = up_seq.astype('int32')
+        down_seq = down_seq.astype('int32')
 
-     # Offset
+    # Offset
     if offset != 0:
         up_seq = up_seq.shift(offset)
         down_seq = down_seq.shift(offset)
@@ -66,12 +63,11 @@ def td_seq(close, asint=None, offset=None, **kwargs):
     up_seq.category = down_seq.category = "momentum"
 
     # Prepare Dataframe to return
-    df = DataFrame({up_seq.name: up_seq, down_seq.name: down_seq})
+    df = cudf.DataFrame({up_seq.name: up_seq, down_seq.name: down_seq})
     df.name = "TD_SEQ"
     df.category = up_seq.category
 
     return df
-
 
 td_seq.__doc__ = \
 """TD Sequential (TD_SEQ)

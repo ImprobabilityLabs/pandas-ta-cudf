@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-from .roc import roc
+import cudf
+from cuml.preprocessing import roc as curoc
 from pandas_ta.overlap import wma
 from pandas_ta.utils import get_offset, verify_series
-
 
 def coppock(close, length=None, fast=None, slow=None, offset=None, **kwargs):
     """Indicator: Coppock Curve (COPC)"""
@@ -15,8 +15,11 @@ def coppock(close, length=None, fast=None, slow=None, offset=None, **kwargs):
 
     if close is None: return
 
+    # Convert to CuDF
+    close = cudf.Series(close)
+
     # Calculate Result
-    total_roc = roc(close, fast) + roc(close, slow)
+    total_roc = curoc(close, fast) + curoc(close, slow)
     coppock = wma(total_roc, length)
 
     # Offset
@@ -34,7 +37,6 @@ def coppock(close, length=None, fast=None, slow=None, offset=None, **kwargs):
     coppock.category = "momentum"
 
     return coppock
-
 
 coppock.__doc__ = \
 """Coppock Curve (COPC)
@@ -59,7 +61,7 @@ Calculation:
     CCI = (tp - mean_tp) / (c * mad_tp)
 
 Args:
-    close (pd.Series): Series of 'close's
+    close (pd.Series or cuDF.Series): Series of 'close's
     length (int): WMA period. Default: 10
     fast (int): Fast ROC period. Default: 11
     slow (int): Slow ROC period. Default: 14
@@ -70,5 +72,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cuDF.Series: New feature generated.
 """

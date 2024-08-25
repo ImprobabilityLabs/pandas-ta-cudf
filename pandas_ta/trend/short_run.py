@@ -1,22 +1,22 @@
 # -*- coding: utf-8 -*-
+import cudf
 from .decreasing import decreasing
 from .increasing import increasing
 from pandas_ta.utils import get_offset, verify_series
-
 
 def short_run(fast, slow, length=None, offset=None, **kwargs):
     """Indicator: Short Run"""
     # Validate Arguments
     length = int(length) if length and length > 0 else 2
-    fast = verify_series(fast, length)
-    slow = verify_series(slow, length)
+    fast_cu = cudf.DataFrame({'fast': verify_series(fast, length)})
+    slow_cu = cudf.DataFrame({'slow': verify_series(slow, length)})
     offset = get_offset(offset)
 
-    if fast is None or slow is None: return
+    if fast_cu is None or slow_cu is None: return
 
     # Calculate Result
-    pt = decreasing(fast, length) & increasing(slow, length)  # potential top or top
-    bd = decreasing(fast, length) & decreasing(slow, length)  # fast and slow are decreasing
+    pt = decreasing(fast_cu, length) & increasing(slow_cu, length)  # potential top or top
+    bd = decreasing(fast_cu, length) & decreasing(slow_cu, length)  # fast and slow are decreasing
     short_run = pt | bd
 
     # Offset

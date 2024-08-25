@@ -1,4 +1,6 @@
+```
 # -*- coding: utf-8 -*-
+import cudf
 from pandas_ta import Imports
 from pandas_ta.overlap import ma
 from pandas_ta.utils import get_offset, tal_ma, verify_series
@@ -21,7 +23,7 @@ def apo(close, fast=None, slow=None, mamode=None, talib=None, offset=None, **kwa
     # Calculate Result
     if Imports["talib"] and mode_tal:
         from talib import APO
-        apo = APO(close, fast, slow, tal_ma(mamode))
+        apo = cudf.Series(APO(close.values, fast, slow, tal_ma(mamode)))
     else:
         fastma = ma(mamode, close, length=fast)
         slowma = ma(mamode, close, length=slow)
@@ -76,3 +78,4 @@ Kwargs:
 Returns:
     pd.Series: New feature generated.
 """
+```

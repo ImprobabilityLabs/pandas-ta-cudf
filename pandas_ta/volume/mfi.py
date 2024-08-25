@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
-from pandas import DataFrame
+import cudf
 from pandas_ta import Imports
 from pandas_ta.overlap import hlc3
 from pandas_ta.utils import get_drift, get_offset, verify_series
-
 
 def mfi(high, low, close, volume, length=None, talib=None, drift=None, offset=None, **kwargs):
     """Indicator: Money Flow Index (MFI)"""
@@ -27,7 +26,7 @@ def mfi(high, low, close, volume, length=None, talib=None, drift=None, offset=No
         typical_price = hlc3(high=high, low=low, close=close)
         raw_money_flow = typical_price * volume
 
-        tdf = DataFrame({"diff": 0, "rmf": raw_money_flow, "+mf": 0, "-mf": 0})
+        tdf = cudf.DataFrame({"diff": 0, "rmf": raw_money_flow, "+mf": 0, "-mf": 0})
 
         tdf.loc[(typical_price.diff(drift) > 0), "diff"] = 1
         tdf.loc[tdf["diff"] == 1, "+mf"] = raw_money_flow
@@ -35,8 +34,8 @@ def mfi(high, low, close, volume, length=None, talib=None, drift=None, offset=No
         tdf.loc[(typical_price.diff(drift) < 0), "diff"] = -1
         tdf.loc[tdf["diff"] == -1, "-mf"] = raw_money_flow
 
-        psum = tdf["+mf"].rolling(length).sum()
-        nsum = tdf["-mf"].rolling(length).sum()
+        psum = tdf["+mf"].rolling(window=length).sum()
+        nsum = tdf["-mf"].rolling(window=length).sum()
         tdf["mr"] = psum / nsum
         mfi = 100 * psum / (psum + nsum)
         tdf["mfi"] = mfi
@@ -80,10 +79,10 @@ Calculation:
     MFI = money_flow_index = 100 * pmf / (pmf + nmf)
 
 Args:
-    high (pd.Series): Series of 'high's
-    low (pd.Series): Series of 'low's
-    close (pd.Series): Series of 'close's
-    volume (pd.Series): Series of 'volume's
+    high (pd.Series or cudf.Series): Series of 'high's
+    low (pd.Series or cudf.Series): Series of 'low's
+    close (pd.Series or cudf.Series): Series of 'close's
+    volume (pd.Series or cudf.Series): Series of 'volume's
     length (int): The sum period. Default: 14
     talib (bool): If TA Lib is installed and talib is True, Returns the TA Lib
         version. Default: True
@@ -95,5 +94,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    pd.Series or cudf.Series: New feature generated.
 """

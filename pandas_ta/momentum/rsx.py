@@ -1,31 +1,16 @@
-# -*- coding: utf-8 -*-
-from numpy import nan as npNaN
-from pandas import concat, DataFrame, Series
-from pandas_ta.utils import get_drift, get_offset, verify_series, signals
+import cudf
+from numba import cuda
 
+@cuda.jit
+def rsx_kernel(close, length, drift, offset, result):
+    idx = cuda.grid(1)
+    if idx < close.size:
+        vC, v1C = 0, 0
+        v4, v8, v10, v14, v18, v20 = 0, 0, 0, 0, 0, 0
+        f0, f8, f10, f18, f20, f28, f30, f38 = 0, 0, 0, 0, 0, 0, 0, 0
+        f40, f48, f50, f58, f60, f68, f70, f78 = 0, 0, 0, 0, 0, 0, 0, 0
+        f80, f88, f90 = 0, 0, 0
 
-def rsx(close, length=None, drift=None, offset=None, **kwargs):
-    """Indicator: Relative Strength Xtra (inspired by Jurik RSX)"""
-    # Validate arguments
-    length = int(length) if length and length > 0 else 14
-    close = verify_series(close, length)
-    drift = get_drift(drift)
-    offset = get_offset(offset)
-
-    if close is None: return
-
-    # variables
-    vC, v1C = 0, 0
-    v4, v8, v10, v14, v18, v20 = 0, 0, 0, 0, 0, 0
-
-    f0, f8, f10, f18, f20, f28, f30, f38 = 0, 0, 0, 0, 0, 0, 0, 0
-    f40, f48, f50, f58, f60, f68, f70, f78 = 0, 0, 0, 0, 0, 0, 0, 0
-    f80, f88, f90 = 0, 0, 0
-
-    # Calculate Result
-    m = close.size
-    result = [npNaN for _ in range(0, length - 1)] + [0]
-    for i in range(length, m):
         if f90 == 0:
             f90 = 1.0
             f0 = 0.0
@@ -33,7 +18,7 @@ def rsx(close, length=None, drift=None, offset=None, **kwargs):
                 f88 = length - 1.0
             else:
                 f88 = 5.0
-            f8 = 100.0 * close.iloc[i]
+            f8 = 100.0 * close[idx]
             f18 = 3.0 / (length + 2.0)
             f20 = 1.0 - f18
         else:
@@ -42,7 +27,7 @@ def rsx(close, length=None, drift=None, offset=None, **kwargs):
             else:
                 f90 = f90 + 1
             f10 = f8
-            f8 = 100 * close.iloc[i]
+            f8 = 100 * close[idx]
             v8 = f8 - f10
             f28 = f20 * f28 + f18 * v8
             f30 = f18 * f28 + f20 * f30
@@ -76,30 +61,47 @@ def rsx(close, length=None, drift=None, offset=None, **kwargs):
                 v4 = 0.0
         else:
             v4 = 50.0
-        result.append(v4)
-    rsx = Series(result, index=close.index)
+        result[idx] = v4
+
+def rsx(close, length=None, drift=None, offset=None, **kwargs):
+    """Indicator: Relative Strength Xtra (inspired by Jurik RSX)"""
+    # Validate arguments
+    length = int(length) if length and length > 0 else 14
+    close = cudf.Series(close).fillna(cuda.numba.cuda.np.nan)
+    drift = get_drift(drift)
+    offset = get_offset(offset)
+
+    if close is None: return
+
+    # Initialize result
+    result = cudf.Series([cuda.numba.cuda.np.nan for _ in range(0, length - 1)] + [0], index=close.index)
+
+    # Launch kernel
+    threadsperblock = 256
+    blockspergrid = (close.size + threadsperblock - 1) // threadsperblock
+    rsx_kernel[blockspergrid, threadsperblock](close, length, drift, offset, result)
 
     # Offset
     if offset != 0:
-        rsx = rsx.shift(offset)
+        result = result.shift(offset)
 
     # Handle fills
     if "fillna" in kwargs:
-        rsx.fillna(kwargs["fillna"], inplace=True)
+        result.fillna(kwargs["fillna"], inplace=True)
     if "fill_method" in kwargs:
-        rsx.fillna(method=kwargs["fill_method"], inplace=True)
+        result.fillna(method=kwargs["fill_method"], inplace=True)
 
     # Name and Categorize it
-    rsx.name = f"RSX_{length}"
-    rsx.category = "momentum"
+    result.name = f"RSX_{length}"
+    result.category = "momentum"
 
     signal_indicators = kwargs.pop("signal_indicators", False)
     if signal_indicators:
-        signalsdf = concat(
+        signalsdf = cudf.concat(
             [
-                DataFrame({rsx.name: rsx}),
+                cudf.DataFrame({result.name: result}),
                 signals(
-                    indicator=rsx,
+                    indicator=result,
                     xa=kwargs.pop("xa", 80),
                     xb=kwargs.pop("xb", 20),
                     xserie=kwargs.pop("xserie", None),
@@ -115,35 +117,4 @@ def rsx(close, length=None, drift=None, offset=None, **kwargs):
 
         return signalsdf
     else:
-        return rsx
-
-
-rsx.__doc__ = \
-"""Relative Strength Xtra (rsx)
-
-The Relative Strength Xtra is based on the popular RSI indicator and inspired
-by the work Jurik Research. The code implemented is based on published code
-found at 'prorealcode.com'. This enhanced version of the rsi reduces noise and
-provides a clearer, only slightly delayed insight on momentum and velocity of
-price movements.
-
-Sources:
-    http://www.jurikres.com/catalog1/ms_rsx.htm
-    https://www.prorealcode.com/prorealtime-indicators/jurik-rsx/
-
-Calculation:
-    Refer to the sources above for information as well as code example.
-
-Args:
-    close (pd.Series): Series of 'close's
-    length (int): It's period. Default: 14
-    drift (int): The difference period. Default: 1
-    offset (int): How many periods to offset the result. Default: 0
-
-Kwargs:
-    fillna (value, optional): pd.DataFrame.fillna(value)
-    fill_method (value, optional): Type of fill method
-
-Returns:
-    pd.Series: New feature generated.
-"""
+        return result

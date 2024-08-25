@@ -1,9 +1,10 @@
+```python
 from .config import error_analysis, sample_data, CORRELATION, CORRELATION_THRESHOLD, VERBOSE
 from .context import pandas_ta
 
 from unittest import TestCase, skip
-import pandas.testing as pdt
-from pandas import DataFrame, Series
+import cudf.testing as pdt
+from cudf import DataFrame, Series
 
 import talib as tal
 
@@ -11,7 +12,7 @@ import talib as tal
 class TestMomentum(TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.data = sample_data
+        cls.data = sample_data.to_pandas().to_pandas()
         cls.data.columns = cls.data.columns.str.lower()
         cls.open = cls.data["open"]
         cls.high = cls.data["high"]
@@ -32,7 +33,6 @@ class TestMomentum(TestCase):
 
     def setUp(self): pass
     def tearDown(self): pass
-
 
     def test_datetime_ordered(self):
         # Test if datetime64 index and ordered
@@ -71,7 +71,7 @@ class TestMomentum(TestCase):
 
         try:
             expected = tal.APO(self.close)
-            pdt.assert_series_equal(result, expected, check_names=False)
+            pdt.assert_series_equal(result, expected.to_pandas(), check_names=False)
         except AssertionError:
             try:
                 corr = pandas_ta.utils.df_error_analysis(result, expected, col=CORRELATION)
@@ -95,7 +95,7 @@ class TestMomentum(TestCase):
 
         try:
             expected = tal.BOP(self.open, self.high, self.low, self.close)
-            pdt.assert_series_equal(result, expected, check_names=False)
+            pdt.assert_series_equal(result, expected.to_pandas(), check_names=False)
         except AssertionError:
             try:
                 corr = pandas_ta.utils.df_error_analysis(result, expected, col=CORRELATION)
@@ -119,7 +119,7 @@ class TestMomentum(TestCase):
 
         try:
             expected = tal.CCI(self.high, self.low, self.close)
-            pdt.assert_series_equal(result, expected, check_names=False)
+            pdt.assert_series_equal(result, expected.to_pandas(), check_names=False)
         except AssertionError:
             try:
                 corr = pandas_ta.utils.df_error_analysis(result, expected, col=CORRELATION)
@@ -148,7 +148,7 @@ class TestMomentum(TestCase):
 
         try:
             expected = tal.CMO(self.close)
-            pdt.assert_series_equal(result, expected, check_names=False)
+            pdt.assert_series_equal(result, expected.to_pandas(), check_names=False)
         except AssertionError:
             try:
                 corr = pandas_ta.utils.df_error_analysis(result, expected, col=CORRELATION)
@@ -184,7 +184,7 @@ class TestMomentum(TestCase):
             expected_pos = tal.PLUS_DM(self.high, self.low)
             expected_neg = tal.MINUS_DM(self.high, self.low)
             expecteddf = DataFrame({"DMP_14": expected_pos, "DMN_14": expected_neg})
-            pdt.assert_frame_equal(result, expecteddf)
+            pdt.assert_frame_equal(result.to_pandas(), expecteddf.to_pandas())
         except AssertionError:
             try:
                 dmp = pandas_ta.utils.df_error_analysis(result.iloc[:,0], expecteddf.iloc[:,0], col=CORRELATION)
@@ -243,7 +243,7 @@ class TestMomentum(TestCase):
         try:
             expected = tal.MACD(self.close)
             expecteddf = DataFrame({"MACD_12_26_9": expected[0], "MACDh_12_26_9": expected[2], "MACDs_12_26_9": expected[1]})
-            pdt.assert_frame_equal(result, expecteddf)
+            pdt.assert_frame_equal(result.to_pandas(), expecteddf.to_pandas())
         except AssertionError:
             try:
                 macd_corr = pandas_ta.utils.df_error_analysis(result.iloc[:, 0], expecteddf.iloc[:, 0], col=CORRELATION)
@@ -279,7 +279,7 @@ class TestMomentum(TestCase):
 
         try:
             expected = tal.MOM(self.close)
-            pdt.assert_series_equal(result, expected, check_names=False)
+            pdt.assert_series_equal(result, expected.to_pandas(), check_names=False)
         except AssertionError:
             try:
                 corr = pandas_ta.utils.df_error_analysis(result, expected, col=CORRELATION)
@@ -303,7 +303,7 @@ class TestMomentum(TestCase):
 
         try:
             expected = tal.PPO(self.close)
-            pdt.assert_series_equal(result["PPO_12_26_9"], expected, check_names=False)
+            pdt.assert_series_equal(result["PPO_12_26_9"], expected.to_pandas(), check_names=False)
         except AssertionError:
             try:
                 corr = pandas_ta.utils.df_error_analysis(result["PPO_12_26_9"], expected, col=CORRELATION)
@@ -337,7 +337,7 @@ class TestMomentum(TestCase):
 
         try:
             expected = tal.ROC(self.close)
-            pdt.assert_series_equal(result, expected, check_names=False)
+            pdt.assert_series_equal(result, expected.to_pandas(), check_names=False)
         except AssertionError:
             try:
                 corr = pandas_ta.utils.df_error_analysis(result, expected, col=CORRELATION)
@@ -356,7 +356,7 @@ class TestMomentum(TestCase):
 
         try:
             expected = tal.RSI(self.close)
-            pdt.assert_series_equal(result, expected, check_names=False)
+            pdt.assert_series_equal(result, expected.to_pandas(), check_names=False)
         except AssertionError:
             try:
                 corr = pandas_ta.utils.df_error_analysis(result, expected, col=CORRELATION)
@@ -453,7 +453,7 @@ class TestMomentum(TestCase):
         try:
             expected = tal.STOCH(self.high, self.low, self.close, 14, 3, 0, 3, 0)
             expecteddf = DataFrame({"STOCHk_14_3_0_3_0": expected[0], "STOCHd_14_3_0_3": expected[1]})
-            pdt.assert_frame_equal(result, expecteddf)
+            pdt.assert_frame_equal(result.to_pandas(), expecteddf.to_pandas())
         except AssertionError:
             try:
                 stochk_corr = pandas_ta.utils.df_error_analysis(result.iloc[:, 0], expecteddf.iloc[:, 0], col=CORRELATION)
@@ -476,7 +476,7 @@ class TestMomentum(TestCase):
         try:
             expected = tal.STOCHRSI(self.close, 14, 14, 3, 0)
             expecteddf = DataFrame({"STOCHRSIk_14_14_0_3": expected[0], "STOCHRSId_14_14_3_0": expected[1]})
-            pdt.assert_frame_equal(result, expecteddf)
+            pdt.assert_frame_equal(result.to_pandas(), expecteddf.to_pandas())
         except AssertionError:
             try:
                 stochrsid_corr = pandas_ta.utils.df_error_analysis(result.iloc[:, 0], expecteddf.iloc[:, 1], col=CORRELATION)
@@ -508,7 +508,7 @@ class TestMomentum(TestCase):
 
         try:
             expected = tal.ULTOSC(self.high, self.low, self.close)
-            pdt.assert_series_equal(result, expected, check_names=False)
+            pdt.assert_series_equal(result, expected.to_pandas(), check_names=False)
         except AssertionError:
             try:
                 corr = pandas_ta.utils.df_error_analysis(result, expected, col=CORRELATION)
@@ -527,7 +527,7 @@ class TestMomentum(TestCase):
 
         try:
             expected = tal.WILLR(self.high, self.low, self.close)
-            pdt.assert_series_equal(result, expected, check_names=False)
+            pdt.assert_series_equal(result, expected.to_pandas(), check_names=False)
         except AssertionError:
             try:
                 corr = pandas_ta.utils.df_error_analysis(result, expected, col=CORRELATION)
@@ -538,3 +538,4 @@ class TestMomentum(TestCase):
         result = pandas_ta.willr(self.high, self.low, self.close)
         self.assertIsInstance(result, Series)
         self.assertEqual(result.name, "WILLR_14")
+```

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
+import cudf
 from pandas_ta.overlap import linreg
 from pandas_ta.volatility import rvi
 from pandas_ta.utils import get_drift, get_offset, verify_series
-
 
 def inertia(close=None, high=None, low=None, length=None, rvi_length=None, scalar=None, refined=None, thirds=None, mamode=None, drift=None, offset=None, **kwargs):
     """Indicator: Inertia (INERTIA)"""
@@ -24,6 +24,15 @@ def inertia(close=None, high=None, low=None, length=None, rvi_length=None, scala
         high = verify_series(high, _length)
         low = verify_series(low, _length)
         if high is None or low is None: return
+
+    # Convert to CuDF
+    if not isinstance(close, cudf.Series):
+        close = cudf.Series(close)
+    if refined or thirds:
+        if not isinstance(high, cudf.Series):
+            high = cudf.Series(high)
+        if not isinstance(low, cudf.Series):
+            low = cudf.Series(low)
 
     # Calculate Result
     if refined:

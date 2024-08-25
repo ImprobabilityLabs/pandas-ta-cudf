@@ -1,9 +1,10 @@
+```python
 from .config import error_analysis, sample_data, CORRELATION, CORRELATION_THRESHOLD, VERBOSE
 from .context import pandas_ta
 
 from unittest import TestCase, skip
-import pandas.testing as pdt
-from pandas import DataFrame, Series
+import cudf.testing as cdt
+from cudf import DataFrame, Series
 
 import talib as tal
 
@@ -40,8 +41,8 @@ class TestTrend(TestCase):
         self.assertEqual(result.name, "ADX_14")
 
         try:
-            expected = tal.ADX(self.high, self.low, self.close)
-            pdt.assert_series_equal(result.iloc[:, 0], expected)
+            expected = tal.ADX(self.high.to_pandas(), self.low.to_pandas(), self.close.to_pandas())
+            cdt.assert_series_equal(result.iloc[:, 0].to_pandas(), expected)
         except AssertionError:
             try:
                 corr = pandas_ta.utils.df_error_analysis(result.iloc[:, 0], expected, col=CORRELATION)
@@ -64,9 +65,9 @@ class TestTrend(TestCase):
         self.assertEqual(result.name, "AROON_14")
 
         try:
-            expected = tal.AROON(self.high, self.low)
+            expected = tal.AROON(self.high.to_pandas(), self.low.to_pandas())
             expecteddf = DataFrame({"AROOND_14": expected[0], "AROONU_14": expected[1]})
-            pdt.assert_frame_equal(result, expecteddf)
+            cdt.assert_frame_equal(result.to_pandas(), expecteddf)
         except AssertionError:
             try:
                 aroond_corr = pandas_ta.utils.df_error_analysis(result.iloc[:, 0], expecteddf.iloc[:, 0], col=CORRELATION)
@@ -90,8 +91,8 @@ class TestTrend(TestCase):
         self.assertEqual(result.name, "AROON_14")
 
         try:
-            expected = tal.AROONOSC(self.high, self.low)
-            pdt.assert_series_equal(result.iloc[:, 2], expected)
+            expected = tal.AROONOSC(self.high.to_pandas(), self.low.to_pandas())
+            cdt.assert_series_equal(result.iloc[:, 2].to_pandas(), expected)
         except AssertionError:
             try:
                 aroond_corr = pandas_ta.utils.df_error_analysis(result.iloc[:,2], expected,col=CORRELATION)
@@ -166,8 +167,8 @@ class TestTrend(TestCase):
         psar.name = result.name
 
         try:
-            expected = tal.SAR(self.high, self.low)
-            pdt.assert_series_equal(psar, expected)
+            expected = tal.SAR(self.high.to_pandas(), self.low.to_pandas())
+            cdt.assert_series_equal(psar.to_pandas(), expected)
         except AssertionError:
             try:
                 psar_corr = pandas_ta.utils.df_error_analysis(psar, expected, col=CORRELATION)
@@ -199,3 +200,4 @@ class TestTrend(TestCase):
         result = pandas_ta.vortex(self.high, self.low, self.close)
         self.assertIsInstance(result, DataFrame)
         self.assertEqual(result.name, "VTX_14")
+```

@@ -1,7 +1,10 @@
+Here is the refactored code to work with CuDF and other CUDA stuff:
+```
 # -*- coding: utf-8 -*-
+import cudf
+from cucim_cuimage import CuImage
 from pandas_ta.overlap import sma
 from pandas_ta.utils import get_offset, verify_series
-
 
 def dpo(close, length=None, centered=True, offset=None, **kwargs):
     """Indicator: Detrend Price Oscillator (DPO)"""
@@ -16,11 +19,11 @@ def dpo(close, length=None, centered=True, offset=None, **kwargs):
 
     # Calculate Result
     t = int(0.5 * length) + 1
-    ma = sma(close, length)
+    ma = sma(cudf.Series(close), length)
 
-    dpo = close - ma.shift(t)
+    dpo = cudf.Series(close) - ma.shift(t)
     if centered:
-        dpo = (close.shift(t) - ma).shift(-t)
+        dpo = (cudf.Series(close).shift(t) - ma).shift(-t)
 
     # Offset
     if offset != 0:
@@ -61,7 +64,7 @@ Calculation:
         DPO = DPO.shift(-t)
 
 Args:
-    close (pd.Series): Series of 'close's
+    close (cuDF.Series): Series of 'close's
     length (int): It's period. Default: 1
     centered (bool): Shift the dpo back by int(0.5 * length) + 1. Default: True
     offset (int): How many periods to offset the result. Default: 0
@@ -71,5 +74,6 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cuDF.Series: New feature generated.
 """
+```

@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
-from numpy import nan as npNaN
-from pandas import DataFrame
+import cudf
 from pandas_ta.overlap import hl2
 from pandas_ta.volatility import atr
 from pandas_ta.utils import get_offset, verify_series
@@ -21,7 +20,7 @@ def supertrend(high, low, close, length=None, multiplier=None, offset=None, **kw
     # Calculate Results
     m = close.size
     dir_, trend = [1] * m, [0] * m
-    long, short = [npNaN] * m, [npNaN] * m
+    long, short = [float('nan')] * m, [float('nan')] * m
 
     hl2_ = hl2(high, low)
     matr = multiplier * atr(high, low, close, length)
@@ -47,7 +46,7 @@ def supertrend(high, low, close, length=None, multiplier=None, offset=None, **kw
 
     # Prepare DataFrame to return
     _props = f"_{length}_{multiplier}"
-    df = DataFrame({
+    df = cudf.DataFrame({
             f"SUPERT{_props}": trend,
             f"SUPERTd{_props}": dir_,
             f"SUPERTl{_props}": long,
@@ -107,9 +106,9 @@ Calculation:
         SUPERTREND[i] = FINAL_LOWERBAND[i]
 
 Args:
-    high (pd.Series): Series of 'high's
-    low (pd.Series): Series of 'low's
-    close (pd.Series): Series of 'close's
+    high (cu.Series): Series of 'high's
+    low (cu.Series): Series of 'low's
+    close (cu.Series): Series of 'close's
     length (int) : length for ATR calculation. Default: 7
     multiplier (float): Coefficient for upper and lower band distance to
         midrange. Default: 3.0
@@ -120,5 +119,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.DataFrame: SUPERT (trend), SUPERTd (direction), SUPERTl (long), SUPERTs (short) columns.
+    cu.DataFrame: SUPERT (trend), SUPERTd (direction), SUPERTl (long), SUPERTs (short) columns.
 """

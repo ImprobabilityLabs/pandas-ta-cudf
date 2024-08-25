@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-from pandas_ta.utils import get_offset, symmetric_triangle, verify_series, weights
+import cudf
+from cucim_utils import get_offset, symmetric_triangle, verify_series, weights
 
 
 def swma(close, length=None, asc=None, offset=None, **kwargs):
@@ -15,7 +16,8 @@ def swma(close, length=None, asc=None, offset=None, **kwargs):
 
     # Calculate Result
     triangle = symmetric_triangle(length, weighted=True)
-    swma = close.rolling(length, min_periods=length).apply(weights(triangle), raw=True)
+    close_gpu = cudf.Series(close)
+    swma = close_gpu.rolling(length, min_periods=length).apply(weights(triangle), raw=True)
     # swma = close.rolling(length).apply(weights(triangle), raw=True)
 
     # Offset

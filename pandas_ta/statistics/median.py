@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
+import cudf
 from pandas_ta.utils import get_offset, verify_series
-
 
 def median(close, length=None, offset=None, **kwargs):
     """Indicator: Median"""
@@ -13,7 +13,8 @@ def median(close, length=None, offset=None, **kwargs):
     if close is None: return
 
     # Calculate Result
-    median = close.rolling(length, min_periods=min_periods).median()
+    close_gpu = cudf.from_pandas(close)
+    median = close_gpu.rolling(window=length, min_periods=min_periods).median()
 
     # Offset
     if offset != 0:
@@ -29,8 +30,7 @@ def median(close, length=None, offset=None, **kwargs):
     median.name = f"MEDIAN_{length}"
     median.category = "statistics"
 
-    return median
-
+    return median.to_pandas()
 
 median.__doc__ = \
 """Rolling Median

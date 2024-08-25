@@ -1,12 +1,15 @@
+```python
 from .config import sample_data
 from .context import pandas_ta
 
 from unittest import skip, TestCase
 from unittest.mock import patch
 
+import cupy as cp
 import numpy as np
 import numpy.testing as npt
-from pandas import DataFrame, Series
+import cudf
+from cudf import DataFrame, Series
 from pandas.api.types import is_datetime64_ns_dtype, is_datetime64tz_dtype
 
 
@@ -23,7 +26,7 @@ class TestUtilities(TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.data = sample_data
+        cls.data = cudf.from_pandas(sample_data)
 
     @classmethod
     def tearDownClass(cls):
@@ -59,39 +62,39 @@ class TestUtilities(TestCase):
         result = self.utils._above_below(self.crosseddf["a"], self.crosseddf["zero"], above=True)
         self.assertIsInstance(result, Series)
         self.assertEqual(result.name, "a_A_zero")
-        npt.assert_array_equal(result, self.crosseddf["c"])
+        npt.assert_array_equal(result.to_pandas(), self.crosseddf["c"].to_pandas())
 
         result = self.utils._above_below(self.crosseddf["a"], self.crosseddf["zero"], above=False)
         self.assertIsInstance(result, Series)
         self.assertEqual(result.name, "a_B_zero")
-        npt.assert_array_equal(result, self.crosseddf["b"])
+        npt.assert_array_equal(result.to_pandas(), self.crosseddf["b"].to_pandas())
 
         result = self.utils._above_below(self.crosseddf["c"], self.crosseddf["zero"], above=True)
         self.assertIsInstance(result, Series)
         self.assertEqual(result.name, "c_A_zero")
-        npt.assert_array_equal(result, self.crosseddf["c"])
+        npt.assert_array_equal(result.to_pandas(), self.crosseddf["c"].to_pandas())
 
         result = self.utils._above_below(self.crosseddf["c"], self.crosseddf["zero"], above=False)
         self.assertIsInstance(result, Series)
         self.assertEqual(result.name, "c_B_zero")
-        npt.assert_array_equal(result, self.crosseddf["zero"])
+        npt.assert_array_equal(result.to_pandas(), self.crosseddf["zero"].to_pandas())
 
     def test_above(self):
         result = self.utils.above(self.crosseddf["a"], self.crosseddf["zero"])
         self.assertIsInstance(result, Series)
         self.assertEqual(result.name, "a_A_zero")
-        npt.assert_array_equal(result, self.crosseddf["c"])
+        npt.assert_array_equal(result.to_pandas(), self.crosseddf["c"].to_pandas())
 
         result = self.utils.above(self.crosseddf["zero"], self.crosseddf["a"])
         self.assertIsInstance(result, Series)
         self.assertEqual(result.name, "zero_A_a")
-        npt.assert_array_equal(result, self.crosseddf["b"])
+        npt.assert_array_equal(result.to_pandas(), self.crosseddf["b"].to_pandas())
 
     def test_above_value(self):
         result = self.utils.above_value(self.crosseddf["a"], 0)
         self.assertIsInstance(result, Series)
         self.assertEqual(result.name, "a_A_0")
-        npt.assert_array_equal(result, self.crosseddf["c"])
+        npt.assert_array_equal(result.to_pandas(), self.crosseddf["c"].to_pandas())
 
         result = self.utils.above_value(self.crosseddf["a"], self.crosseddf["zero"])
         self.assertIsNone(result)
@@ -100,18 +103,18 @@ class TestUtilities(TestCase):
         result = self.utils.below(self.crosseddf["zero"], self.crosseddf["a"])
         self.assertIsInstance(result, Series)
         self.assertEqual(result.name, "zero_B_a")
-        npt.assert_array_equal(result, self.crosseddf["c"])
+        npt.assert_array_equal(result.to_pandas(), self.crosseddf["c"].to_pandas())
 
         result = self.utils.below(self.crosseddf["zero"], self.crosseddf["a"])
         self.assertIsInstance(result, Series)
         self.assertEqual(result.name, "zero_B_a")
-        npt.assert_array_equal(result, self.crosseddf["c"])
+        npt.assert_array_equal(result.to_pandas(), self.crosseddf["c"].to_pandas())
 
     def test_below_value(self):
         result = self.utils.below_value(self.crosseddf["a"], 0)
         self.assertIsInstance(result, Series)
         self.assertEqual(result.name, "a_B_0")
-        npt.assert_array_equal(result, self.crosseddf["b"])
+        npt.assert_array_equal(result.to_pandas(), self.crosseddf["b"].to_pandas())
 
         result = self.utils.below_value(self.crosseddf["a"], self.crosseddf["zero"])
         self.assertIsNone(result)
@@ -128,16 +131,16 @@ class TestUtilities(TestCase):
     def test_cross_above(self):
         result = self.utils.cross(self.crosseddf["a"], self.crosseddf["b"])
         self.assertIsInstance(result, Series)
-        npt.assert_array_equal(result, self.crosseddf["crossed"])
+        npt.assert_array_equal(result.to_pandas(), self.crosseddf["crossed"].to_pandas())
 
         result = self.utils.cross(self.crosseddf["a"], self.crosseddf["b"], above=True)
         self.assertIsInstance(result, Series)
-        npt.assert_array_equal(result, self.crosseddf["crossed"])
+        npt.assert_array_equal(result.to_pandas(), self.crosseddf["crossed"].to_pandas())
 
     def test_cross_below(self):
         result = self.utils.cross(self.crosseddf["b"], self.crosseddf["a"], above=False)
         self.assertIsInstance(result, Series)
-        npt.assert_array_equal(result, self.crosseddf["crossed"])
+        npt.assert_array_equal(result.to_pandas(), self.crosseddf["crossed"].to_pandas())
 
     def test_df_dates(self):
         result = self.utils.df_dates(self.data)
@@ -162,24 +165,24 @@ class TestUtilities(TestCase):
         result = self.utils.df_year_to_date(self.data)
 
     def test_fibonacci(self):
-        self.assertIs(type(self.utils.fibonacci(zero=True, weighted=False)), np.ndarray)
+        self.assertIs(type(self.utils.fibonacci(zero=True, weighted=False)), cp.ndarray)
 
-        npt.assert_array_equal(self.utils.fibonacci(zero=True), np.array([0, 1, 1]))
-        npt.assert_array_equal(self.utils.fibonacci(zero=False), np.array([1, 1]))
+        npt.assert_array_equal(self.utils.fibonacci(zero=True), cp.array([0, 1, 1]))
+        npt.assert_array_equal(self.utils.fibonacci(zero=False), cp.array([1, 1]))
 
-        npt.assert_array_equal(self.utils.fibonacci(n=0, zero=True, weighted=False), np.array([0]))
-        npt.assert_array_equal(self.utils.fibonacci(n=0, zero=False, weighted=False), np.array([1]))
+        npt.assert_array_equal(self.utils.fibonacci(n=0, zero=True, weighted=False), cp.array([0]))
+        npt.assert_array_equal(self.utils.fibonacci(n=0, zero=False, weighted=False), cp.array([1]))
 
-        npt.assert_array_equal(self.utils.fibonacci(n=5, zero=True, weighted=False), np.array([0, 1, 1, 2, 3, 5]))
-        npt.assert_array_equal(self.utils.fibonacci(n=5, zero=False, weighted=False), np.array([1, 1, 2, 3, 5]))
+        npt.assert_array_equal(self.utils.fibonacci(n=5, zero=True, weighted=False), cp.array([0, 1, 1, 2, 3, 5]))
+        npt.assert_array_equal(self.utils.fibonacci(n=5, zero=False, weighted=False), cp.array([1, 1, 2, 3, 5]))
 
     def test_fibonacci_weighted(self):
-        self.assertIs(type(self.utils.fibonacci(zero=True, weighted=True)), np.ndarray)
-        npt.assert_array_equal(self.utils.fibonacci(n=0, zero=True, weighted=True), np.array([0]))
-        npt.assert_array_equal(self.utils.fibonacci(n=0, zero=False, weighted=True), np.array([1]))
+        self.assertIs(type(self.utils.fibonacci(zero=True, weighted=True)), cp.ndarray)
+        npt.assert_array_equal(self.utils.fibonacci(n=0, zero=True, weighted=True), cp.array([0]))
+        npt.assert_array_equal(self.utils.fibonacci(n=0, zero=False, weighted=True), cp.array([1]))
 
-        npt.assert_allclose(self.utils.fibonacci(n=5, zero=True, weighted=True), np.array([0, 1 / 12, 1 / 12, 1 / 6, 1 / 4, 5 / 12]))
-        npt.assert_allclose(self.utils.fibonacci(n=5, zero=False, weighted=True), np.array([1 / 12, 1 / 12, 1 / 6, 1 / 4, 5 / 12]))
+        npt.assert_allclose(self.utils.fibonacci(n=5, zero=True, weighted=True), cp.array([0, 1 / 12, 1 / 12, 1 / 6, 1 / 4, 5 / 12]))
+        npt.assert_allclose(self.utils.fibonacci(n=5, zero=False, weighted=True), cp.array([1 / 12, 1 / 12, 1 / 6, 1 / 4, 5 / 12]))
 
 
     def test_geometric_mean(self):
@@ -247,13 +250,13 @@ class TestUtilities(TestCase):
     def test_pascals_triangle(self):
         self.assertIsNone(self.utils.pascals_triangle(inverse=True), None)
 
-        array_1 = np.array([1])
+        array_1 = cp.array([1])
         npt.assert_array_equal(self.utils.pascals_triangle(), array_1)
         npt.assert_array_equal(self.utils.pascals_triangle(weighted=True), array_1)
-        npt.assert_array_equal(self.utils.pascals_triangle(weighted=True, inverse=True), np.array([0]))
+        npt.assert_array_equal(self.utils.pascals_triangle(weighted=True, inverse=True), cp.array([0]))
 
-        array_5 = self.utils.pascals_triangle(n=5)  # or np.array([1, 5, 10, 10, 5, 1])
-        array_5w = array_5 / np.sum(array_5)
+        array_5 = self.utils.pascals_triangle(n=5)
+        array_5w = array_5 / cp.sum(array_5)
         array_5iw = 1 - array_5w
         npt.assert_array_equal(self.utils.pascals_triangle(n=-5), array_5)
         npt.assert_array_equal(self.utils.pascals_triangle(n=-5, weighted=True), array_5w)
@@ -264,16 +267,16 @@ class TestUtilities(TestCase):
         npt.assert_array_equal(self.utils.pascals_triangle(n=5, weighted=True, inverse=True), array_5iw)
 
     def test_symmetric_triangle(self):
-        npt.assert_array_equal(self.utils.symmetric_triangle(), np.array([1,1]))
-        npt.assert_array_equal(self.utils.symmetric_triangle(weighted=True), np.array([0.5, 0.5]))
+        npt.assert_array_equal(self.utils.symmetric_triangle(), cp.array([1,1]))
+        npt.assert_array_equal(self.utils.symmetric_triangle(weighted=True), cp.array([0.5, 0.5]))
 
-        array_4 = self.utils.symmetric_triangle(n=4)  # or np.array([1, 2, 2, 1])
-        array_4w = array_4 / np.sum(array_4)
+        array_4 = self.utils.symmetric_triangle(n=4)
+        array_4w = array_4 / cp.sum(array_4)
         npt.assert_array_equal(self.utils.symmetric_triangle(n=4), array_4)
         npt.assert_array_equal(self.utils.symmetric_triangle(n=4, weighted=True), array_4w)
 
-        array_5 = self.utils.symmetric_triangle(n=5)  # or np.array([1, 2, 3, 2, 1])
-        array_5w = array_5 / np.sum(array_5)
+        array_5 = self.utils.symmetric_triangle(n=5)
+        array_5w = array_5 / cp.sum(array_5)
         npt.assert_array_equal(self.utils.symmetric_triangle(n=5), array_5)
         npt.assert_array_equal(self.utils.symmetric_triangle(n=5, weighted=True), array_5w)
 
@@ -317,8 +320,8 @@ class TestUtilities(TestCase):
 
     def test_to_utc(self):
         result = self.utils.to_utc(self.data.copy())
-        self.assertTrue(is_datetime64_ns_dtype(result.index))
-        self.assertTrue(is_datetime64tz_dtype(result.index))
+        self.assertTrue(is_datetime64_ns_dtype(result.index.to_pandas()))
+        self.assertTrue(is_datetime64tz_dtype(result.index.to_pandas()))
 
     def test_total_time(self):
         result = self.utils.total_time(self.data)
@@ -346,3 +349,4 @@ class TestUtilities(TestCase):
         result = pandas_ta.version
         self.assertIsInstance(result, str)
         print(f"\nPandas TA v{result}")
+```

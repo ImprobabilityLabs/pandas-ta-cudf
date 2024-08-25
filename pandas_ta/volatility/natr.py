@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
+import cudf
 from .atr import atr
 from pandas_ta import Imports
 from pandas_ta.utils import get_drift, get_offset, verify_series
-
 
 def natr(high, low, close, length=None, scalar=None, mamode=None, talib=None, drift=None, offset=None, **kwargs):
     """Indicator: Normalized Average True Range (NATR)"""
@@ -17,15 +17,21 @@ def natr(high, low, close, length=None, scalar=None, mamode=None, talib=None, dr
     offset = get_offset(offset)
     mode_tal = bool(talib) if isinstance(talib, bool) else True
 
-    if high is None or low is None or close is None: return
+    if high is None or low is None or close is None:
+        return
+
+    # Initialize cuDF dataframes
+    high_cu = cudf.DataFrame(high)
+    low_cu = cudf.DataFrame(low)
+    close_cu = cudf.DataFrame(close)
 
     # Calculate Result
     if Imports["talib"] and mode_tal:
         from talib import NATR
-        natr = NATR(high, low, close, length)
+        natr = NATR(high_cu, low_cu, close_cu, length)
     else:
-        natr = scalar / close
-        natr *= atr(high=high, low=low, close=close, length=length, mamode=mamode, drift=drift, offset=offset, **kwargs)
+        natr = scalar / close_cu
+        natr *= atr(high_cu, low_cu, close_cu, length=length, mamode=mamode, drift=drift, offset=offset, **kwargs)
 
     # Offset
     if offset != 0:

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
-from pandas_ta import Imports
-from pandas_ta.utils import get_offset, verify_series
+import cudf
+from cudf-Ta import Imports
+from cudf-Ta.utils import get_offset, verify_series
 
 
 def variance(close, length=None, ddof=None, talib=None, offset=None, **kwargs):
@@ -16,11 +17,10 @@ def variance(close, length=None, ddof=None, talib=None, offset=None, **kwargs):
     if close is None: return
 
     # Calculate Result
-    if Imports["talib"] and mode_tal:
-        from talib import VAR
-        variance = VAR(close, length)
+    if Imports["cudf"] and mode_tal:
+        variance = close.rolling(window=length, min_periods=min_periods).var(ddof)
     else:
-        variance = close.rolling(length, min_periods=min_periods).var(ddof)
+        variance = close.rolling(window=length, min_periods=min_periods).var(ddof)
 
     # Offset
     if offset != 0:
@@ -50,7 +50,7 @@ Calculation:
     VARIANCE = close.rolling(length).var()
 
 Args:
-    close (pd.Series): Series of 'close's
+    close (cudf.Series): Series of 'close's
     length (int): It's period. Default: 30
     ddof (int): Delta Degrees of Freedom.
                 The divisor used in calculations is N - ddof,
@@ -64,5 +64,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cudf.Series: New feature generated.
 """

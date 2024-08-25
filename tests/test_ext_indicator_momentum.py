@@ -1,8 +1,9 @@
+```python
 from .config import sample_data
-from .context import pandas_ta
+from .context import cudf_ta as ta
 
 from unittest import skip, TestCase
-from pandas import DataFrame
+from cudf import DataFrame
 
 
 class TestMomentumExtension(TestCase):
@@ -258,3 +259,4 @@ class TestMomentumExtension(TestCase):
         self.data.ta.willr(append=True)
         self.assertIsInstance(self.data, DataFrame)
         self.assertEqual(self.data.columns[-1], "WILLR_14")
+```

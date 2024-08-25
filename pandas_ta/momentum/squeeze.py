@@ -1,12 +1,14 @@
+```python
 # -*- coding: utf-8 -*-
+from cudf import DataFrame
 from numpy import nan as npNaN
-from pandas import DataFrame
-from pandas_ta.momentum import mom
-from pandas_ta.overlap import ema, linreg, sma
-from pandas_ta.trend import decreasing, increasing
-from pandas_ta.volatility import bbands, kc
-from pandas_ta.utils import get_offset
-from pandas_ta.utils import unsigned_differences, verify_series
+from cusignal import rolling as cu_rolling
+from cudf_ta.momentum import mom
+from cudf_ta.overlap import ema, linreg, sma
+from cudf_ta.trend import decreasing, increasing
+from cudf_ta.volatility import bbands, kc
+from cudf_ta.utils import get_offset
+from cudf_ta.utils import unsigned_differences, verify_series
 
 
 def squeeze(high, low, close, bb_length=None, bb_std=None, kc_length=None, kc_scalar=None, mom_length=None, mom_smooth=None, use_tr=None, mamode=None, offset=None, **kwargs):
@@ -45,8 +47,8 @@ def squeeze(high, low, close, bb_length=None, bb_std=None, kc_length=None, kc_sc
     kch.columns = simplify_columns(kch)
 
     if lazybear:
-        highest_high = high.rolling(kc_length).max()
-        lowest_low = low.rolling(kc_length).min()
+        highest_high = cu_rolling(high, window=kc_length).max()
+        lowest_low = cu_rolling(low, window=kc_length).min()
         avg_ = 0.25 * (highest_high + lowest_low) + 0.5 * kch.b
 
         squeeze = linreg(close - avg_, length=kc_length)
@@ -55,7 +57,7 @@ def squeeze(high, low, close, bb_length=None, bb_std=None, kc_length=None, kc_sc
         momo = mom(close, length=mom_length)
         if mamode.lower() == "ema":
             squeeze = ema(momo, length=mom_smooth)
-        else: # "sma"
+        else:  # "sma"
             squeeze = sma(momo, length=mom_smooth)
 
     # Classify Squeezes
@@ -194,9 +196,9 @@ Calculation:
     NO_SQZ = !SQZ_ON and !SQZ_OFF
 
 Args:
-    high (pd.Series): Series of 'high's
-    low (pd.Series): Series of 'low's
-    close (pd.Series): Series of 'close's
+    high (cudf.Series): Series of 'high's
+    low (cudf.Series): Series of 'low's
+    close (cudf.Series): Series of 'close's
     bb_length (int): Bollinger Bands period. Default: 20
     bb_std (float): Bollinger Bands Std. Dev. Default: 2
     kc_length (int): Keltner Channel period. Default: 20
@@ -214,10 +216,11 @@ Kwargs:
         Default: False
     detailed (value, optional): Return additional variations of SQZ for
         visualization. Default: False
-    fillna (value, optional): pd.DataFrame.fillna(value)
+    fillna (value, optional): cudf.DataFrame.fillna(value)
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.DataFrame: SQZ, SQZ_ON, SQZ_OFF, NO_SQZ columns by default. More
+    cudf.DataFrame: SQZ, SQZ_ON, SQZ_OFF, NO_SQZ columns by default. More
         detailed columns if 'detailed' kwarg is True.
 """
+```

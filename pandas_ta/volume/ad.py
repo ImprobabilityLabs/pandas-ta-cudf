@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
-from pandas_ta import Imports
+import cucim
+from cudf import Series
+from cuml.tensor.tensor_algo import cumsum
 from pandas_ta.utils import get_offset, non_zero_range, verify_series
-
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
+warnings.simplefilter(action='ignore', category=UserWarning)
 
 def ad(high, low, close, volume, open_=None, talib=None, offset=None, **kwargs):
     """Indicator: Accumulation/Distribution (AD)"""
@@ -26,7 +30,7 @@ def ad(high, low, close, volume, open_=None, talib=None, offset=None, **kwargs):
 
         high_low_range = non_zero_range(high, low)
         ad *= volume / high_low_range
-        ad = ad.cumsum()
+        ad = cumsum(ad)
 
     # Offset
     if offset != 0:
@@ -66,11 +70,11 @@ Calculation:
     AD = CUM(AD)
 
 Args:
-    high (pd.Series): Series of 'high's
-    low (pd.Series): Series of 'low's
-    close (pd.Series): Series of 'close's
-    volume (pd.Series): Series of 'volume's
-    open (pd.Series): Series of 'open's
+    high (pd.Series or cudf.Series): Series of 'high's
+    low (pd.Series or cudf.Series): Series of 'low's
+    close (pd.Series or cudf.Series): Series of 'close's
+    volume (pd.Series or cudf.Series): Series of 'volume's
+    open (pd.Series or cudf.Series): Series of 'open's
     talib (bool): If TA Lib is installed and talib is True, Returns the TA Lib
         version. Default: True
     offset (int): How many periods to offset the result. Default: 0
@@ -80,5 +84,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    pd.Series or cudf.Series: New feature generated.
 """

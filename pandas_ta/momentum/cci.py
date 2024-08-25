@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
+import cudf
 from pandas_ta import Imports
 from pandas_ta.overlap import hlc3, sma
 from pandas_ta.statistics.mad import mad
 from pandas_ta.utils import get_offset, verify_series
-
 
 def cci(high, low, close, length=None, c=None, talib=None, offset=None, **kwargs):
     """Indicator: Commodity Channel Index (CCI)"""
@@ -16,14 +16,18 @@ def cci(high, low, close, length=None, c=None, talib=None, offset=None, **kwargs
     offset = get_offset(offset)
     mode_tal = bool(talib) if isinstance(talib, bool) else True
 
-    if high is None or low is None or close is None: return
+    if high is None or low is None or close is None: 
+        return
+
+    # Convert to CuDF DataFrame
+    df = cudf.DataFrame({"high": high, "low": low, "close": close})
 
     # Calculate Result
     if Imports["talib"] and mode_tal:
         from talib import CCI
-        cci = CCI(high, low, close, length)
+        cci = CCI(df["high"], df["low"], df["close"], length)
     else:
-        typical_price = hlc3(high=high, low=low, close=close)
+        typical_price = hlc3(high=df["high"], low=df["low"], close=df["close"])
         mean_typical_price = sma(typical_price, length=length)
         mad_typical_price = mad(typical_price, length=length)
 
@@ -45,7 +49,6 @@ def cci(high, low, close, length=None, c=None, talib=None, offset=None, **kwargs
     cci.category = "momentum"
 
     return cci
-
 
 cci.__doc__ = \
 """Commodity Channel Index (CCI)

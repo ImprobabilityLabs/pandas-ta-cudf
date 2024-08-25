@@ -1,19 +1,20 @@
 # -*- coding: utf-8 -*-
-from pandas_ta.utils import get_offset, verify_series, weights
-
+import cudf
+from cudf.utils import cudautils
+from cuml.preprocessing.utils import weights
 
 def cg(close, length=None, offset=None, **kwargs):
     """Indicator: Center of Gravity (CG)"""
     # Validate Arguments
     length = int(length) if length and length > 0 else 10
-    close = verify_series(close, length)
+    close = cudf.Series(close)
     offset = get_offset(offset)
 
     if close is None: return
 
     # Calculate Result
-    coefficients = [length - i for i in range(0, length)]
-    numerator = -close.rolling(length).apply(weights(coefficients), raw=True)
+    coefficients = cudautils.cuda_tensor_from_host([length - i for i in range(0, length)])
+    numerator = -close.rolling(length).apply(lambda x: weights(coefficients, x), raw=True)
     cg = numerator / close.rolling(length).sum()
 
     # Offset
@@ -47,7 +48,7 @@ Calculation:
         length=10
 
 Args:
-    close (pd.Series): Series of 'close's
+    close (cudf.Series): Series of 'close's
     length (int): The length of the period. Default: 10
     offset (int): How many periods to offset the result. Default: 0
 
@@ -56,5 +57,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cudf.Series: New feature generated.
 """

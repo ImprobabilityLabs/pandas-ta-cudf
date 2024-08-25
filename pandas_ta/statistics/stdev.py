@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
+import cudf
+from cudf.core import Series
+from cuml stats import variance as cuvariance
 from numpy import sqrt as npsqrt
-from .variance import variance
 from pandas_ta import Imports
 from pandas_ta.utils import get_offset, verify_series
-
 
 def stdev(close, length=None, ddof=None, talib=None, offset=None, **kwargs):
     """Indicator: Standard Deviation"""
@@ -21,7 +22,10 @@ def stdev(close, length=None, ddof=None, talib=None, offset=None, **kwargs):
         from talib import STDDEV
         stdev = STDDEV(close, length)
     else:
-        stdev = variance(close=close, length=length, ddof=ddof).apply(npsqrt)
+        if isinstance(close, Series):
+            stdev = cuvariance(close, ddof=ddof).apply(npsqrt)
+        else:
+            stdev = variance(close=close, length=length, ddof=ddof).apply(npsqrt)
 
     # Offset
     if offset != 0:
@@ -52,7 +56,7 @@ Calculation:
     STDEV = variance(close, length).apply(np.sqrt)
 
 Args:
-    close (pd.Series): Series of 'close's
+    close (pd.Series or cudf.Series): Series of 'close's
     length (int): It's period. Default: 30
     ddof (int): Delta Degrees of Freedom.
                 The divisor used in calculations is N - ddof,
@@ -66,5 +70,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    pd.Series or cudf.Series: New feature generated.
 """

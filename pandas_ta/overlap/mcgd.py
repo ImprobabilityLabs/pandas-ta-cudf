@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
+import cudf
 from pandas_ta.utils import get_offset, verify_series
-
+from numba import cuda
 
 def mcgd(close, length=None, offset=None, c=None, **kwargs):
     """Indicator: McGinley Dynamic Indicator"""
@@ -13,8 +14,9 @@ def mcgd(close, length=None, offset=None, c=None, **kwargs):
     if close is None: return
 
     # Calculate Result
-    close = close.copy()
+    close = cudf.Series(close).copy()
 
+    @cuda.jit
     def mcg_(series):
         denom = (c * length * (series.iloc[1] / series.iloc[0]) ** 4)
         series.iloc[1] = (series.iloc[0] + ((series.iloc[1] - series.iloc[0]) / denom))
@@ -68,7 +70,7 @@ Calculation:
     mcg_ds = close[:1].append(mcg_cell[1:])
 
 Args:
-    close (pd.Series): Series of 'close's
+    close (cudf.Series): Series of 'close's
     length (int): Indicator's period. Default: 10
     offset (int): Number of periods to offset the result. Default: 0
     c (float): Multiplier for the denominator, sometimes set to 0.6. Default: 1
@@ -78,5 +80,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cudf.Series: New feature generated.
 """

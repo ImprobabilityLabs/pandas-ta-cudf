@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
+import cudf
 from pandas_ta.overlap import ma
 from pandas_ta.utils import get_offset, verify_series
-
 
 def bias(close, length=None, mamode=None, offset=None, **kwargs):
     """Indicator: Bias (BIAS)"""
@@ -51,7 +51,7 @@ Calculation:
          = (close / MA(close, length)) - 1
 
 Args:
-    close (pd.Series): Series of 'close's
+    close (cuDF.Series): Series of 'close's
     length (int): The period. Default: 26
     mamode (str): See ```help(ta.ma)```. Default: 'sma'
     drift (int): The short period. Default: 1
@@ -62,5 +62,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cuDF.Series: New feature generated.
 """

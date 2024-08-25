@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
-# from numpy import sqrt as npsqrt
-from pandas import DataFrame
+import cudf
+from cuml.internals.array import _to_cudf
 from .atr import atr
 from pandas_ta.overlap import hlc3, sma
 from pandas_ta.utils import get_offset, verify_series
-
 
 def aberration(high, low, close, length=None, atr_length=None, offset=None, **kwargs):
     """Indicator: Aberration (ABER)"""
@@ -18,6 +17,11 @@ def aberration(high, low, close, length=None, atr_length=None, offset=None, **kw
     offset = get_offset(offset)
 
     if high is None or low is None or close is None: return
+
+    # Convert to cuDF
+    high = _to_cudf(high)
+    low = _to_cudf(low)
+    close = _to_cudf(close)
 
     # Calculate Result
     atr_ = atr(high=high, low=low, close=close, length=atr_length)
@@ -57,7 +61,7 @@ def aberration(high, low, close, length=None, atr_length=None, offset=None, **kw
 
     # Prepare DataFrame to return
     data = {zg.name: zg, sg.name: sg, xg.name: xg, atr_.name: atr_}
-    aberdf = DataFrame(data)
+    aberdf = cudf.DataFrame(data)
     aberdf.name = f"ABER{_props}"
     aberdf.category = zg.category
 

@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
+import cudf
 from pandas_ta import Imports
 from pandas_ta.utils import get_offset, verify_series
-
 
 def mom(close, length=None, talib=None, offset=None, **kwargs):
     """Indicator: Momentum (MOM)"""
     # Validate Arguments
     length = int(length) if length and length > 0 else 10
-    close = verify_series(close, length)
+    close = verify_series(cudf.Series(close), length)
     offset = get_offset(offset)
     mode_tal = bool(talib) if isinstance(talib, bool) else True
 
@@ -16,7 +16,7 @@ def mom(close, length=None, talib=None, offset=None, **kwargs):
     # Calculate Result
     if Imports["talib"] and mode_tal:
         from talib import MOM
-        mom = MOM(close, length)
+        mom = MOM(close.to_pandas(), length)
     else:
         mom = close.diff(length)
 
@@ -35,7 +35,6 @@ def mom(close, length=None, talib=None, offset=None, **kwargs):
     mom.category = "momentum"
 
     return mom
-
 
 mom.__doc__ = \
 """Momentum (MOM)

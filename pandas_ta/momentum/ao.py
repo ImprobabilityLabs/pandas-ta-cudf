@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import cudf
 from pandas_ta.overlap import sma
 from pandas_ta.utils import get_offset, verify_series
 
@@ -58,16 +59,16 @@ Calculation:
     AO = SMA(median, fast) - SMA(median, slow)
 
 Args:
-    high (pd.Series): Series of 'high's
-    low (pd.Series): Series of 'low's
+    high (cuDF.Series): Series of 'high's
+    low (cuDF.Series): Series of 'low's
     fast (int): The short period. Default: 5
     slow (int): The long period. Default: 34
     offset (int): How many periods to offset the result. Default: 0
 
 Kwargs:
-    fillna (value, optional): pd.DataFrame.fillna(value)
+    fillna (value, optional): cuDF.DataFrame.fillna(value)
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cuDF.Series: New feature generated.
 """

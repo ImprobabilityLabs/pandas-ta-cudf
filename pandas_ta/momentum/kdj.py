@@ -1,8 +1,9 @@
+Here is the refactored code:
+```
 # -*- coding: utf-8 -*-
-from pandas import DataFrame
+import cudf
 from pandas_ta.overlap import rma
 from pandas_ta.utils import get_offset, non_zero_range, verify_series
-
 
 def kdj(high=None, low=None, close=None, length=None, signal=None, offset=None, **kwargs):
     """Indicator: KDJ (KDJ)"""
@@ -17,9 +18,14 @@ def kdj(high=None, low=None, close=None, length=None, signal=None, offset=None, 
 
     if high is None or low is None or close is None: return
 
+    # Ensure CuDF series
+    high = cudf.Series(high.values, index=high.index)
+    low = cudf.Series(low.values, index=low.index)
+    close = cudf.Series(close.values, index=close.index)
+
     # Calculate Result
-    highest_high = high.rolling(length).max()
-    lowest_low = low.rolling(length).min()
+    highest_high = high.rolling(window=length).max()
+    lowest_low = low.rolling(window=length).min()
 
     fastk = 100 * (close - lowest_low) / non_zero_range(highest_high, lowest_low)
 
@@ -51,7 +57,7 @@ def kdj(high=None, low=None, close=None, length=None, signal=None, offset=None, 
     k.category = d.category = j.category = "momentum"
 
     # Prepare DataFrame to return
-    kdjdf = DataFrame({k.name: k, d.name: d, j.name: j})
+    kdjdf = cudf.DataFrame({k.name: k, d.name: d, j.name: j})
     kdjdf.name = f"KDJ{_params}"
     kdjdf.category = "momentum"
 
@@ -98,3 +104,4 @@ Kwargs:
 Returns:
     pd.Series: New feature generated.
 """
+```

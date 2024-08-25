@@ -1,8 +1,8 @@
+```
 # -*- coding: utf-8 -*-
-from pandas import DataFrame
+import cudf
 from pandas_ta.overlap import ema
 from pandas_ta.utils import get_offset, verify_series
-
 
 def eri(high, low, close, length=None, offset=None, **kwargs):
     """Indicator: Elder Ray Index (ERI)"""
@@ -40,12 +40,11 @@ def eri(high, low, close, length=None, offset=None, **kwargs):
 
     # Prepare DataFrame to return
     data = {bull.name: bull, bear.name: bear}
-    df = DataFrame(data)
+    df = cudf.DataFrame(data)
     df.name = f"ERI_{length}"
     df.category = bull.category
 
     return df
-
 
 eri.__doc__ = \
 """Elder Ray Index (ERI)
@@ -72,9 +71,9 @@ Calculation:
     BEARPOWER = low - EMA(close, length)
 
 Args:
-    high (pd.Series): Series of 'high's
-    low (pd.Series): Series of 'low's
-    close (pd.Series): Series of 'close's
+    high (cu.Series): Series of 'high's
+    low (cu.Series): Series of 'low's
+    close (cu.Series): Series of 'close's
     length (int): It's period. Default: 14
     offset (int): How many periods to offset the result. Default: 0
 
@@ -83,5 +82,6 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.DataFrame: bull power and bear power columns.
+    cu.DataFrame: bull power and bear power columns.
 """
+```

@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
-from pandas import Series
-
+import cudf
 from .dema import dema
 from .ema import ema
 from .fwma import fwma
@@ -20,7 +19,7 @@ from .wma import wma
 from .zlma import zlma
 
 
-def ma(name:str = None, source:Series = None, **kwargs) -> Series:
+def ma(name: str = None, source: cudf.Series = None, **kwargs) -> cudf.Series:
     """Simple MA Utility for easier MA selection
 
     Available MAs:
@@ -34,13 +33,13 @@ def ma(name:str = None, source:Series = None, **kwargs) -> Series:
 
     Args:
         name (str): One of the Available MAs. Default: "ema"
-        source (pd.Series): The 'source' Series.
+        source (cudf.Series): The 'source' Series.
 
     Kwargs:
         Any additional kwargs the MA may require.
 
     Returns:
-        pd.Series: New feature generated.
+        cudf.Series: New feature generated.
     """
 
     _mas = [
@@ -51,7 +50,7 @@ def ma(name:str = None, source:Series = None, **kwargs) -> Series:
         return _mas
     elif isinstance(name, str) and name.lower() in _mas:
         name = name.lower()
-    else: # "ema"
+    else:  # "ema"
         name = _mas[1]
 
     if   name == "dema": return dema(source, **kwargs)

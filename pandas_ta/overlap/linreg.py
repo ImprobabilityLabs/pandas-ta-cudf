@@ -1,12 +1,9 @@
 # -*- coding: utf-8 -*-
-from numpy import array as npArray
-from numpy import arctan as npAtan
-from numpy import nan as npNaN
-from numpy import pi as npPi
-from numpy.version import version as npVersion
-from pandas import Series
-from pandas_ta.utils import get_offset, verify_series
+import cudf
+import cuml
+import numpy as np
 
+from pandas_ta.utils import get_offset, verify_series
 
 def linreg(close, length=None, offset=None, **kwargs):
     """Indicator: Linear Regression"""
@@ -24,7 +21,7 @@ def linreg(close, length=None, offset=None, **kwargs):
     if close is None: return
 
     # Calculate Result
-    x = range(1, length + 1)  # [1, 2, ..., n] from 1 to n keeps Sum(xy) low
+    x = cudf.Series(range(1, length + 1))  # [1, 2, ..., n] from 1 to n keeps Sum(xy) low
     x_sum = 0.5 * length * (length + 1)
     x2_sum = x_sum * (2 * length + 1) / 3
     divisor = length * x2_sum - x_sum * x_sum
@@ -41,9 +38,9 @@ def linreg(close, length=None, offset=None, **kwargs):
             return b
 
         if angle:
-            theta = npAtan(m)
+            theta = np.arctan(m)
             if degrees:
-                theta *= 180 / npPi
+                theta *= 180 / np.pi
             return theta
 
         if r:
@@ -54,20 +51,18 @@ def linreg(close, length=None, offset=None, **kwargs):
 
         return m * length + b if tsf else m * (length - 1) + b
 
-    def rolling_window(array, length):
-        """https://github.com/twopirllc/pandas-ta/issues/285"""
-        strides = array.strides + (array.strides[-1],)
-        shape = array.shape[:-1] + (array.shape[-1] - length + 1, length)
-        return as_strided(array, shape=shape, strides=strides)
+    x_df = cudf.DataFrame({'x': x})
+    close_df = cudf.DataFrame({'close': close})
 
-    if npVersion >= "1.20.0":
-        from numpy.lib.stride_tricks import sliding_window_view
-        linreg_ = [linear_regression(_) for _ in sliding_window_view(npArray(close), length)]
-    else:
-        from numpy.lib.stride_tricks import as_strided
-        linreg_ = [linear_regression(_) for _ in rolling_window(npArray(close), length)]
+    rolling_df = cuml.window.Rolling(x_df, window=length)
+    rolling_df = rolling_df.agg({'x': 'sum'})
 
-    linreg = Series([npNaN] * (length - 1) + linreg_, index=close.index)
+    rolling CLOSE_df = cuml.window.Rolling(close_df, window=length)
+    rolling_CLOSE_df = rolling_CLOSE_df.agg({'close': ['sum', 'prod']})
+
+    linreg_ = rolling_CLOSE_df.apply(lambda row: linear_regression(row))
+
+    linreg = cudf.Series(linreg_, index=close.index)
 
     # Offset
     if offset != 0:
@@ -87,10 +82,9 @@ def linreg(close, length=None, offset=None, **kwargs):
     if r: linreg.name += "r"
 
     linreg.name += f"_{length}"
-    linreg.category = "overlap"
+    linreg._column_meta = {"category": "overlap"}
 
     return linreg
-
 
 linreg.__doc__ = \
 """Linear Regression Moving Average (linreg)

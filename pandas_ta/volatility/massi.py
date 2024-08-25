@@ -1,7 +1,22 @@
 # -*- coding: utf-8 -*-
-from pandas_ta.overlap import ema
-from pandas_ta.utils import get_offset, non_zero_range, verify_series
+import cudf
+from cucim import cuimage
+from cuml.preprocessing import cumlIFT
+from cuml.ensemble import RandomForestClassifier
+from cuml.metrics import accuracy_score
+from cuml.feature_selection import mutual_info_classif
+from cuml.preprocessing import LabelEncoder
+import pandas as pd
+from pandas_ta.overlap import ema as pd_ema
+from pandas_ta.utils import get_offset, non_zero_range, verify_series as pd_verify_series
 
+def ema(close, length, **kwargs):
+    return close.rolling(window=length).mean()
+
+def verify_series(series, length):
+    if len(series) < length:
+        series = series.iloc[-length:]
+    return series
 
 def massi(high, low, fast=None, slow=None, offset=None, **kwargs):
     """Indicator: Mass Index (MASSI)"""
@@ -20,11 +35,11 @@ def massi(high, low, fast=None, slow=None, offset=None, **kwargs):
 
     # Calculate Result
     high_low_range = non_zero_range(high, low)
-    hl_ema1 = ema(close=high_low_range, length=fast, **kwargs)
+    hl_ema1 = ema(close=cudf.Series(high_low_range), length=fast, **kwargs)
     hl_ema2 = ema(close=hl_ema1, length=fast, **kwargs)
 
     hl_ratio = hl_ema1 / hl_ema2
-    massi = hl_ratio.rolling(slow, min_periods=slow).sum()
+    massi = hl_ratio.rolling(window=slow, min_periods=slow).sum()
 
     # Offset
     if offset != 0:
@@ -64,8 +79,8 @@ Calculation:
     MASSI = SUM(hl_ratio, slow)
 
 Args:
-    high (pd.Series): Series of 'high's
-    low (pd.Series): Series of 'low's
+    high (cuDF Series): Series of 'high's
+    low (cuDF Series): Series of 'low's
     fast (int): The short period. Default: 9
     slow (int): The long period. Default: 25
     offset (int): How many periods to offset the result. Default: 0
@@ -75,5 +90,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cuDF Series: New feature generated.
 """

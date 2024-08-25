@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
+import cudf
 from pandas_ta.momentum import roc
-from pandas_ta.utils import get_drift, get_offset, verify_series
-
+from pandas_ta.utils import get_drift, get_offset, verify_series_cudf
 
 def pvt(close, volume, drift=None, offset=None, **kwargs):
     """Indicator: Price-Volume Trend (PVT)"""
     # Validate arguments
-    close = verify_series(close)
-    volume = verify_series(volume)
+    close = verify_series_cudf(close)
+    volume = verify_series_cudf(volume)
     drift = get_drift(drift)
     offset = get_offset(offset)
 
@@ -49,8 +49,8 @@ Calculation:
     PVT = pv.cumsum()
 
 Args:
-    close (pd.Series): Series of 'close's
-    volume (pd.Series): Series of 'volume's
+    close (cudf.Series): Series of 'close's
+    volume (cudf.Series): Series of 'volume's
     drift (int): The diff period. Default: 1
     offset (int): How many periods to offset the result. Default: 0
 
@@ -59,5 +59,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.Series: New feature generated.
+    cudf.Series: New feature generated.
 """

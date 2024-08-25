@@ -1,8 +1,12 @@
+```
 # -*- coding: utf-8 -*-
-from numpy import sqrt as npsqrt
-from pandas_ta.overlap import sma
-from pandas_ta.utils import get_offset, verify_series
+import cudf
+from cuml.preprocessing import FunctionTransformer
+import cupy as cp
+import numpy as np
 
+def sqrt(x):
+    return cp.sqrt(x)
 
 def ui(close, length=None, scalar=None, offset=None, **kwargs):
     """Indicator: Ulcer Index (UI)"""
@@ -15,7 +19,7 @@ def ui(close, length=None, scalar=None, offset=None, **kwargs):
     if close is None: return
 
     # Calculate Result
-    highest_close = close.rolling(length).max()
+    highest_close = close.rolling(window=length).max()
     downside = scalar * (close - highest_close)
     downside /= highest_close
     d2 = downside * downside
@@ -23,9 +27,9 @@ def ui(close, length=None, scalar=None, offset=None, **kwargs):
     everget = kwargs.pop("everget", False)
     if everget:
         # Everget uses SMA instead of SUM for calculation
-        ui = (sma(d2, length) / length).apply(npsqrt)
+        ui = FunctionTransformer(sqrt)(cudf.Series(d2).rolling(window=length).mean())
     else:
-        ui = (d2.rolling(length).sum() / length).apply(npsqrt)
+        ui = FunctionTransformer(sqrt)(cudf.Series(d2).rolling(window=length).sum() / length)
 
     # Offset
     if offset != 0:
@@ -84,3 +88,4 @@ Kwargs:
 Returns:
     pd.Series: New feature
 """
+```

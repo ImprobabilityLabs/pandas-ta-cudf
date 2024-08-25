@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
-from pandas import DataFrame
+import cudf
 from pandas_ta.overlap import ema
 from pandas_ta.utils import get_offset, verify_series
-
 
 def pvo(volume, fast=None, slow=None, signal=None, scalar=None, offset=None, **kwargs):
     """Indicator: Percentage Volume Oscillator (PVO)"""
@@ -19,8 +18,8 @@ def pvo(volume, fast=None, slow=None, signal=None, scalar=None, offset=None, **k
     if volume is None: return
 
     # Calculate Result
-    fastma = ema(volume, length=fast)
-    slowma = ema(volume, length=slow)
+    fastma = ema(cudf.Series(volume), length=fast)
+    slowma = ema(cudf.Series(volume), length=slow)
     pvo = scalar * (fastma - slowma)
     pvo /= slowma
 
@@ -52,7 +51,7 @@ def pvo(volume, fast=None, slow=None, signal=None, scalar=None, offset=None, **k
 
     #
     data = {pvo.name: pvo, histogram.name: histogram, signalma.name: signalma}
-    df = DataFrame(data)
+    df = cudf.DataFrame(data)
     df.name = pvo.name
     df.category = pvo.category
 
@@ -77,7 +76,7 @@ Calculation:
     Histogram = PVO - Signal
 
 Args:
-    volume (pd.Series): Series of 'volume's
+    volume (cudf.Series): Series of 'volume's
     fast (int): The short period. Default: 12
     slow (int): The long period. Default: 26
     signal (int): The signal period. Default: 9
@@ -89,5 +88,5 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.DataFrame: pvo, histogram, signal columns.
+    cudf.DataFrame: pvo, histogram, signal columns.
 """

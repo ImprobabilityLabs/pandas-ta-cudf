@@ -1,10 +1,10 @@
-# -*- coding: utf-8 -*-
-from pandas import DataFrame
+import cudf
+from cuml.utils import get_output_type
 from .obv import obv
-from pandas_ta.overlap import ma
-from pandas_ta.trend import long_run, short_run
-from pandas_ta.utils import get_offset, verify_series
-
+from cucim.ucd import cuda_ma as ma
+from cucim.ucd import cuda_long_run as long_run
+from cucim.ucd import cuda_short_run as short_run
+from cucim.ucd import get_offset, verify_series
 
 def aobv(close, volume, fast=None, slow=None, max_lookback=None, min_lookback=None, mamode=None, offset=None, **kwargs):
     """Indicator: Archer On Balance Volume (AOBV)"""
@@ -67,7 +67,7 @@ def aobv(close, volume, fast=None, slow=None, max_lookback=None, min_lookback=No
         f"AOBV_LR_{run_length}": obv_long,
         f"AOBV_SR_{run_length}": obv_short,
     }
-    aobvdf = DataFrame(data)
+    aobvdf = cudf.DataFrame(data)
 
     # Name and Categorize it
     aobvdf.name = f"AOBV{_mode}_{fast}_{slow}_{min_lookback}_{max_lookback}_{run_length}"

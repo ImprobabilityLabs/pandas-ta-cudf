@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
+import cupy as cp
+import cudf
 from pandas_ta import Imports
 from pandas_ta.utils import get_offset, verify_series
-
 
 def midprice(high, low, length=None, talib=None, offset=None, **kwargs):
     """Indicator: Midprice"""
@@ -16,13 +17,17 @@ def midprice(high, low, length=None, talib=None, offset=None, **kwargs):
 
     if high is None or low is None: return
 
+    # Convert pd.DataFrame to cuDF
+    high = cudf.from_pandas(high)
+    low = cudf.from_pandas(low)
+
     # Calculate Result
     if Imports["talib"] and mode_tal:
         from talib import MIDPRICE
         midprice = MIDPRICE(high, low, length)
     else:
-        lowest_low = low.rolling(length, min_periods=min_periods).min()
-        highest_high = high.rolling(length, min_periods=min_periods).max()
+        lowest_low = low.rolling(window=length, min_periods=min_periods).min()
+        highest_high = high.rolling(window=length, min_periods=min_periods).max()
         midprice = 0.5 * (lowest_low + highest_high)
 
     # Offset
@@ -38,5 +43,8 @@ def midprice(high, low, length=None, talib=None, offset=None, **kwargs):
     # Name and Categorize it
     midprice.name = f"MIDPRICE_{length}"
     midprice.category = "overlap"
+
+    # Convert back to pandas
+    midprice = midprice.to_pandas()
 
     return midprice

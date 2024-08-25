@@ -1,7 +1,6 @@
-# -*- coding: utf-8 -*-
-from pandas import date_range, DataFrame, RangeIndex, Timedelta
-from .midprice import midprice
-from pandas_ta.utils import get_offset, verify_series
+import cudf
+from cuml.tsa.midprice import midprice
+from cuml.utils import get_offset, verify_series
 
 
 def ichimoku(high, low, close, tenkan=None, kijun=None, senkou=None, include_chikou=True, offset=None, **kwargs):
@@ -71,21 +70,21 @@ def ichimoku(high, low, close, tenkan=None, kijun=None, senkou=None, include_chi
     if include_chikou:
         data[chikou_span.name] = chikou_span
 
-    ichimokudf = DataFrame(data)
+    ichimokudf = cudf.DataFrame(data)
     ichimokudf.name = f"ICHIMOKU_{tenkan}_{kijun}_{senkou}"
     ichimokudf.category = "overlap"
 
     # Prepare Span DataFrame
     last = close.index[-1]
     if close.index.dtype == "int64":
-        ext_index = RangeIndex(start=last + 1, stop=last + kijun + 1)
-        spandf = DataFrame(index=ext_index, columns=[span_a.name, span_b.name])
+        ext_index = cudf.RangeIndex(start=last + 1, stop=last + kijun + 1)
+        spandf = cudf.DataFrame(index=ext_index, columns=[span_a.name, span_b.name])
         _span_a.index = _span_b.index = ext_index
     else:
         df_freq = close.index.value_counts().mode()[0]
-        tdelta = Timedelta(df_freq, unit="d")
-        new_dt = date_range(start=last + tdelta, periods=kijun, freq="B")
-        spandf = DataFrame(index=new_dt, columns=[span_a.name, span_b.name])
+        tdelta = cudf.Timedelta(df_freq, unit="d")
+        new_dt = cudf.date_range(start=last + tdelta, periods=kijun, freq="B")
+        spandf = cudf.DataFrame(index=new_dt, columns=[span_a.name, span_b.name])
         _span_a.index = _span_b.index = new_dt
 
     spandf[span_a.name] = _span_a
@@ -94,7 +93,6 @@ def ichimoku(high, low, close, tenkan=None, kijun=None, senkou=None, include_chi
     spandf.category = "overlap"
 
     return ichimokudf, spandf
-
 
 ichimoku.__doc__ = \
 """Ichimoku Kinkō Hyō (ichimoku)
@@ -119,9 +117,9 @@ Calculation:
     SPAN_B = SPAN_B.shift(kijun)
 
 Args:
-    high (pd.Series): Series of 'high's
-    low (pd.Series): Series of 'low's
-    close (pd.Series): Series of 'close's
+    high (cudf.Series): Series of 'high's
+    low (cudf.Series): Series of 'low's
+    close (cudf.Series): Series of 'close's
     tenkan (int): Tenkan period. Default: 9
     kijun (int): Kijun period. Default: 26
     senkou (int): Senkou period. Default: 52
@@ -133,7 +131,7 @@ Kwargs:
     fill_method (value, optional): Type of fill method
 
 Returns:
-    pd.DataFrame: Two DataFrames.
+    cudf.DataFrame: Two DataFrames.
         For the visible period: spanA, spanB, tenkan_sen, kijun_sen,
             and chikou_span columns
         For the forward looking period: spanA and spanB columns

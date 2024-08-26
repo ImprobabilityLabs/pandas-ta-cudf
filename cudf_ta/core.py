@@ -1356,9 +1356,99 @@ class AnalysisIndicators(BasePandasObject):
         return self._post_process(result, **kwargs)
 
     def adosc(self, open_=None, fast=None, slow=None, signed=True, offset=None, **kwargs):
-        open_ = self._get_column(kwargs.pop("open", "open"))
+        if open_ is not None:
+            open_ = self._get_column(kwargs.pop("open", "open"))
         high = self._get_column(kwargs.pop("high", "high"))
         low = self._get_column(kwargs.pop("low", "low"))
         close = self._get_column(kwargs.pop("close", "close"))
         volume = self._get_column(kwargs.pop("volume", "volume"))
-        result = adosc(high=high, low
+        result = adosc(high=high, low=low, close=close, volume=volume, open_=open_, fast=fast, slow=slow, signed=signed, offset=offset, **kwargs)
+        return self._post_process(result, **kwargs)
+
+    def aobv(self, fast=None, slow=None, mamode=None, max_lookback=None, min_lookback=None, offset=None, **kwargs):
+        close = self._get_column(kwargs.pop("close", "close"))
+        volume = self._get_column(kwargs.pop("volume", "volume"))
+        result = aobv(close=close, volume=volume, fast=fast, slow=slow, mamode=mamode, max_lookback=max_lookback, min_lookback=min_lookback, offset=offset, **kwargs)
+        return self._post_process(result, **kwargs)
+
+    def cmf(self, open_=None, length=None, offset=None, **kwargs):
+        if open_ is not None:
+            open_ = self._get_column(kwargs.pop("open", "open"))
+        high = self._get_column(kwargs.pop("high", "high"))
+        low = self._get_column(kwargs.pop("low", "low"))
+        close = self._get_column(kwargs.pop("close", "close"))
+        volume = self._get_column(kwargs.pop("volume", "volume"))
+        result = cmf(high=high, low=low, close=close, volume=volume, open_=open_, length=length, offset=offset, **kwargs)
+        return self._post_process(result, **kwargs)
+
+    def efi(self, length=None, mamode=None, offset=None, drift=None, **kwargs):
+        close = self._get_column(kwargs.pop("close", "close"))
+        volume = self._get_column(kwargs.pop("volume", "volume"))
+        result = efi(close=close, volume=volume, length=length, offset=offset, mamode=mamode, drift=drift, **kwargs)
+        return self._post_process(result, **kwargs)
+
+    def eom(self, length=None, divisor=None, offset=None, drift=None, **kwargs):
+        high = self._get_column(kwargs.pop("high", "high"))
+        low = self._get_column(kwargs.pop("low", "low"))
+        close = self._get_column(kwargs.pop("close", "close"))
+        volume = self._get_column(kwargs.pop("volume", "volume"))
+        result = eom(high=high, low=low, close=close, volume=volume, length=length, divisor=divisor, offset=offset, drift=drift, **kwargs)
+        return self._post_process(result, **kwargs)
+
+    def kvo(self, fast=None, slow=None, length_sig=None, mamode=None, offset=None, drift=None, **kwargs):
+        high = self._get_column(kwargs.pop("high", "high"))
+        low = self._get_column(kwargs.pop("low", "low"))
+        close = self._get_column(kwargs.pop("close", "close"))
+        volume = self._get_column(kwargs.pop("volume", "volume"))
+        result = kvo(high=high, low=low, close=close, volume=volume, fast=fast, slow=slow, length_sig=length_sig, mamode=mamode, offset=offset, drift=drift, **kwargs)
+        return self._post_process(result, **kwargs)
+
+    def mfi(self, length=None, drift=None, offset=None, **kwargs):
+        high = self._get_column(kwargs.pop("high", "high"))
+        low = self._get_column(kwargs.pop("low", "low"))
+        close = self._get_column(kwargs.pop("close", "close"))
+        volume = self._get_column(kwargs.pop("volume", "volume"))
+        result = mfi(high=high, low=low, close=close, volume=volume, length=length, drift=drift, offset=offset, **kwargs)
+        return self._post_process(result, **kwargs)
+
+    def nvi(self, length=None, initial=None, signed=True, offset=None, **kwargs):
+        close = self._get_column(kwargs.pop("close", "close"))
+        volume = self._get_column(kwargs.pop("volume", "volume"))
+        result = nvi(close=close, volume=volume, length=length, initial=initial, signed=signed, offset=offset, **kwargs)
+        return self._post_process(result, **kwargs)
+
+    def obv(self, offset=None, **kwargs):
+        close = self._get_column(kwargs.pop("close", "close"))
+        volume = self._get_column(kwargs.pop("volume", "volume"))
+        result = obv(close=close, volume=volume, offset=offset, **kwargs)
+        return self._post_process(result, **kwargs)
+
+    def pvi(self, length=None, initial=None, signed=True, offset=None, **kwargs):
+        close = self._get_column(kwargs.pop("close", "close"))
+        volume = self._get_column(kwargs.pop("volume", "volume"))
+        result = pvi(close=close, volume=volume, length=length, initial=initial, signed=signed, offset=offset, **kwargs)
+        return self._post_process(result, **kwargs)
+
+    def pvol(self, volume=None, offset=None, **kwargs):
+        close = self._get_column(kwargs.pop("close", "close"))
+        volume = self._get_column(kwargs.pop("volume", "volume"))
+        result = pvol(close=close, volume=volume, offset=offset, **kwargs)
+        return self._post_process(result, **kwargs)
+
+    def pvr(self, **kwargs):
+        close = self._get_column(kwargs.pop("close", "close"))
+        volume = self._get_column(kwargs.pop("volume", "volume"))
+        result = pvr(close=close, volume=volume)
+        return self._post_process(result, **kwargs)
+
+    def pvt(self, offset=None, **kwargs):
+        close = self._get_column(kwargs.pop("close", "close"))
+        volume = self._get_column(kwargs.pop("volume", "volume"))
+        result = pvt(close=close, volume=volume, offset=offset, **kwargs)
+        return self._post_process(result, **kwargs)
+
+    def vp(self, width=None, percent=None, **kwargs):
+        close = self._get_column(kwargs.pop("close", "close"))
+        volume = self._get_column(kwargs.pop("volume", "volume"))
+        result = vp(close=close, volume=volume, width=width, percent=percent, **kwargs)
+        return self._post_process(result, **kwargs)

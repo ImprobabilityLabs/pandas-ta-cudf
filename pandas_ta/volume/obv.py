@@ -24,10 +24,10 @@ def obv(close, volume, talib=None, offset=None, **kwargs):
         obv = obv.shift(offset)
 
     # Handle fills
+    # cudf: fillna returns new Series, doesn't support inplace or method parameter
     if "fillna" in kwargs:
-        obv.fillna(kwargs["fillna"], inplace=True)
-    if "fill_method" in kwargs:
-        obv.fillna(method=kwargs["fill_method"], inplace=True)
+        obv = obv.fillna(kwargs["fillna"])
+    # Note: cudf doesn't support fill_method parameter
 
     # Name and Categorize it
     obv.name = f"OBV"

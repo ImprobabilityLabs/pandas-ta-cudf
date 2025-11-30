@@ -18,7 +18,8 @@ def pvi(close, volume, length=None, initial=None, offset=None, **kwargs):
     # Calculate Result
     signed_volume = signed_series(volume, 1)
     pvi = roc(close=close, length=length) * signed_volume[signed_volume > 0].abs()
-    pvi.fillna(0, inplace=True)
+    # cudf: fillna returns new Series, doesn't support inplace
+    pvi = pvi.fillna(0)
     pvi.iloc[0] = initial
     pvi = pvi.cumsum()
 
@@ -27,10 +28,10 @@ def pvi(close, volume, length=None, initial=None, offset=None, **kwargs):
         pvi = pvi.shift(offset)
 
     # Handle fills
+    # cudf: fillna returns new Series, doesn't support inplace or method parameter
     if "fillna" in kwargs:
-        pvi.fillna(kwargs["fillna"], inplace=True)
-    if "fill_method" in kwargs:
-        pvi.fillna(method=kwargs["fill_method"], inplace=True)
+        pvi = pvi.fillna(kwargs["fillna"])
+    # Note: cudf doesn't support fill_method parameter
 
     # Name and Categorize it
     pvi.name = f"PVI_{length}"

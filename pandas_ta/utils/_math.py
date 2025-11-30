@@ -20,7 +20,7 @@ from numpy import seterr
 from numpy import sqrt as npSqrt
 from numpy import sum as npSum
 
-from pandas import DataFrame, Series
+from cudf import DataFrame, Series
 
 from pandas_ta import Imports
 from ._core import verify_series

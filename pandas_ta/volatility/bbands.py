@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from pandas import DataFrame
+from cudf import DataFrame
 from pandas_ta import Imports
 from pandas_ta.overlap import ma
 from pandas_ta.statistics import stdev
@@ -45,18 +45,14 @@ def bbands(close, length=None, std=None, ddof=0, mamode=None, talib=None, offset
         percent = bandwidth.shift(offset)
 
     # Handle fills
+    # cudf: fillna returns new Series, doesn't support inplace or method parameter
     if "fillna" in kwargs:
-        lower.fillna(kwargs["fillna"], inplace=True)
-        mid.fillna(kwargs["fillna"], inplace=True)
-        upper.fillna(kwargs["fillna"], inplace=True)
-        bandwidth.fillna(kwargs["fillna"], inplace=True)
-        percent.fillna(kwargs["fillna"], inplace=True)
-    if "fill_method" in kwargs:
-        lower.fillna(method=kwargs["fill_method"], inplace=True)
-        mid.fillna(method=kwargs["fill_method"], inplace=True)
-        upper.fillna(method=kwargs["fill_method"], inplace=True)
-        bandwidth.fillna(method=kwargs["fill_method"], inplace=True)
-        percent.fillna(method=kwargs["fill_method"], inplace=True)
+        lower = lower.fillna(kwargs["fillna"])
+        mid = mid.fillna(kwargs["fillna"])
+        upper = upper.fillna(kwargs["fillna"])
+        bandwidth = bandwidth.fillna(kwargs["fillna"])
+        percent = percent.fillna(kwargs["fillna"])
+    # Note: cudf doesn't support fill_method parameter
 
     # Name and Categorize it
     lower.name = f"BBL_{length}_{std}"

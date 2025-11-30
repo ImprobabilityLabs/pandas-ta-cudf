@@ -1,5 +1,8 @@
-numpy==1.22.0
-pandas==1.2.0
-python-dateutil==2.8.1
-pytz==2021.1
-six==1.16.0
+numpy>=1.20.0
+cudf>=23.02.0
+cupy-cuda11x>=11.0.0  # or cupy-cuda12x for CUDA 12.x
+python-dateutil>=2.8.1
+pytz>=2021.1
+six>=1.16.0
+# Note: cuDF requires CUDA toolkit and compatible GPU
+# Install cudf via conda: conda install -c rapidsai -c conda-forge cudf

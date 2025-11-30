@@ -4,7 +4,7 @@
   </a>
 </p>
 
-Pandas TA - A Technical Analysis Library in Python 3
+Pandas TA (cuDF Edition) - A GPU-Accelerated Technical Analysis Library in Python 3
 =================
 
 [![license](https://img.shields.io/github/license/twopirllc/pandas-ta)](#license)
@@ -25,7 +25,9 @@ Pandas TA - A Technical Analysis Library in Python 3
 ![Example Chart](/images/TA_Chart.png)
 
 
-_Pandas Technical Analysis_ (**Pandas TA**) is an easy to use library that leverages the Pandas package with more than 130 Indicators and Utility functions and more than 60 TA Lib Candlestick Patterns. Many commonly used indicators are included, such as: _Candle Pattern_(**cdl_pattern**), _Simple Moving Average_ (**sma**) _Moving Average Convergence Divergence_ (**macd**), _Hull Exponential Moving Average_ (**hma**), _Bollinger Bands_ (**bbands**), _On-Balance Volume_ (**obv**), _Aroon & Aroon Oscillator_ (**aroon**), _Squeeze_ (**squeeze**) and **_many more_**.
+_Pandas Technical Analysis (cuDF Edition)_ (**Pandas TA**) is an easy to use library that leverages **cuDF** (NVIDIA's GPU-accelerated DataFrame library) with more than 130 Indicators and Utility functions and more than 60 TA Lib Candlestick Patterns. This version is optimized for GPU computation, providing significant performance improvements for large datasets. Many commonly used indicators are included, such as: _Candle Pattern_(**cdl_pattern**), _Simple Moving Average_ (**sma**) _Moving Average Convergence Divergence_ (**macd**), _Hull Exponential Moving Average_ (**hma**), _Bollinger Bands_ (**bbands**), _On-Balance Volume_ (**obv**), _Aroon & Aroon Oscillator_ (**aroon**), _Squeeze_ (**squeeze**) and **_many more_**.
+
+**Note:** This is a cuDF-adapted version of pandas-ta. It requires CUDA-capable GPU and cuDF installation.
 
 
 **Note:** _TA Lib_ must be installed to use **all** the Candlestick Patterns. ```pip install TA-Lib```. If _TA Lib_ is not installed, then only the builtin Candlestick Patterns will be available.
@@ -130,19 +132,20 @@ $ pip install -U git+https://github.com/twopirllc/pandas-ta.git@development
 
  # **Quick Start**
 ```python
-import pandas as pd
+import cudf
 import pandas_ta as ta
 
-df = pd.DataFrame() # Empty DataFrame
+df = cudf.DataFrame() # Empty cuDF DataFrame
 
 # Load data
-df = pd.read_csv("path/to/symbol.csv", sep=",")
-# OR if you have yfinance installed
-df = df.ta.ticker("aapl")
+df = cudf.read_csv("path/to/symbol.csv", sep=",")
+# OR if you have yfinance installed (note: may need to convert pandas to cudf)
+# df_pandas = pd.read_csv("path/to/symbol.csv")
+# df = cudf.from_pandas(df_pandas)
 
 # VWAP requires the DataFrame index to be a DatetimeIndex.
 # Replace "datetime" with the appropriate column from your DataFrame
-df.set_index(pd.DatetimeIndex(df["datetime"]), inplace=True)
+df.set_index(cudf.to_datetime(df["datetime"]), inplace=True)
 
 # Calculate Returns and append to the df DataFrame
 df.ta.log_return(cumulative=True, append=True)

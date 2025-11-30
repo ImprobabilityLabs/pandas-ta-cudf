@@ -4,9 +4,17 @@ from pathlib import Path
 from sys import float_info as sflt
 
 from numpy import argmax, argmin
-from pandas import DataFrame, Series
-from pandas.api.types import is_datetime64_any_dtype
+import cudf
+from cudf import DataFrame, Series
 from pandas_ta import Imports
+
+# Compatibility: cudf doesn't have is_datetime64_any_dtype, use alternative check
+def is_datetime64_any_dtype(arr):
+    """Check if array/index is datetime type (cudf compatible)"""
+    try:
+        return hasattr(arr, 'dtype') and 'datetime' in str(arr.dtype).lower()
+    except:
+        return False
 
 
 def _camelCase2Title(x: str):
@@ -54,8 +62,9 @@ def is_percent(x: int or float) -> bool:
 def non_zero_range(high: Series, low: Series) -> Series:
     """Returns the difference of two series and adds epsilon to any zero values.  This occurs commonly in crypto data when 'high' = 'low'."""
     diff = high - low
-    if diff.eq(0).any().any():
-        diff += sflt.epsilon
+    # cudf: any() returns scalar, not Series
+    if diff.eq(0).any():
+        diff = diff + sflt.epsilon
     return diff
 
 
@@ -76,10 +85,14 @@ def signed_series(series: Series, initial: int = None) -> Series:
     sign = Series([NaN, -1.0, 0.0, -1.0, 0.0, 1.0, 1.0, 0.0, 1.0, -1.0])
     """
     series = verify_series(series)
-    sign = series.diff(1)
-    sign[sign > 0] = 1
-    sign[sign < 0] = -1
-    sign.iloc[0] = initial
+    sign = series.diff(periods=1)
+    # cudf: use where() for conditional assignment
+    # First set positive values to 1, then negative values to -1
+    sign = sign.where(sign <= 0, 1)  # values > 0 -> 1, keep others
+    sign = sign.where(sign >= 0, -1)  # values < 0 -> -1, keep others (including 1s)
+    # Set initial value if provided
+    if initial is not None and len(sign) > 0:
+        sign.iloc[0] = initial
     return sign
 
 
@@ -112,15 +125,17 @@ def unsigned_differences(series: Series, amount: int = None, **kwargs) -> Series
     negative = Series([0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 1])
     """
     amount = int(amount) if amount is not None else 1
-    negative = series.diff(amount)
-    negative.fillna(0, inplace=True)
+    negative = series.diff(periods=amount)
+    # cudf: fillna returns new Series, doesn't have inplace
+    negative = negative.fillna(0)
     positive = negative.copy()
 
-    positive[positive <= 0] = 0
-    positive[positive > 0] = 1
+    # cudf: use where() for conditional assignment
+    positive = positive.where(positive > 0, 0)
+    positive = positive.where(positive <= 0, 1)
 
-    negative[negative >= 0] = 0
-    negative[negative < 0] = 1
+    negative = negative.where(negative < 0, 0)
+    negative = negative.where(negative >= 0, 1)
 
     if kwargs.pop("asint", False):
         positive = positive.astype(int)
@@ -130,7 +145,7 @@ def unsigned_differences(series: Series, amount: int = None, **kwargs) -> Series
 
 
 def verify_series(series: Series, min_length: int = None) -> Series:
-    """If a Pandas Series and it meets the min_length of the indicator return it."""
+    """If a cuDF Series and it meets the min_length of the indicator return it."""
     has_length = min_length is not None and isinstance(min_length, int)
     if series is not None and isinstance(series, Series):
-        return None if has_length and series.size < min_length else series
+        return None if has_length and len(series) < min_length else series

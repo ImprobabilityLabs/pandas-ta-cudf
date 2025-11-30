@@ -6,10 +6,10 @@ from time import perf_counter
 from typing import List, Tuple
 from warnings import simplefilter
 
-import pandas as pd
+import cudf
+from cudf import DataFrame, Series
 from numpy import log10 as npLog10
 from numpy import ndarray as npNdarray
-from pandas.core.base import PandasObject
 
 from pandas_ta import Category, Imports, version
 from pandas_ta.candles.cdl_pattern import ALL_PATTERNS
@@ -25,7 +25,7 @@ from pandas_ta.volume import *
 from pandas_ta.utils import *
 
 
-df = pd.DataFrame()
+df = DataFrame()
 
 # Strategy DataClass
 @dataclass
@@ -110,15 +110,15 @@ CommonStrategy = Strategy(
 )
 
 
-# Base Class for extending a Pandas DataFrame
-class BasePandasObject(PandasObject):
-    """Simple PandasObject Extension
+# Base Class for extending a cuDF DataFrame
+class BasePandasObject:
+    """Simple cuDF DataFrame Extension
 
     Ensures the DataFrame is not empty and has columns.
     It would be a sad Panda otherwise.
 
     Args:
-        df (pd.DataFrame): Extends Pandas DataFrame
+        df (cudf.DataFrame): Extends cuDF DataFrame
     """
 
     def __init__(self, df, **kwargs):
@@ -158,18 +158,18 @@ class BasePandasObject(PandasObject):
         raise NotImplementedError()
 
 
-# Pandas TA - DataFrame Analysis Indicators
-@pd.api.extensions.register_dataframe_accessor("ta")
+# Pandas TA - DataFrame Analysis Indicators (cuDF version)
+# Note: cuDF doesn't support register_dataframe_accessor, so we'll use a different approach
 class AnalysisIndicators(BasePandasObject):
     """
-    This Pandas Extension is named 'ta' for Technical Analysis. In other words,
+    This cuDF Extension is named 'ta' for Technical Analysis. In other words,
     it is a Numerical Time Series Feature Generator where the Time Series data
     is biased towards Financial Market data; typical data includes columns
     named :"open", "high", "low", "close", "volume".
 
     This TA Library hopefully allows you to apply familiar and unique Technical
     Analysis Indicators easily with the DataFrame Extension named 'ta'. Even
-    though 'ta' is a Pandas DataFrame Extension, you can still call Technical
+    though 'ta' is a cuDF DataFrame Extension, you can still call Technical
     Analysis indicators individually if you are more comfortable with that
     approach or it allows you to easily and automatically apply the indicators
     with the strategy method. See: help(ta.strategy).
@@ -202,19 +202,19 @@ class AnalysisIndicators(BasePandasObject):
             resultant column(s) to the DataFrame.
 
     Returns:
-        Most Indicators will return a Pandas Series. Others like MACD, BBANDS,
-        KC, et al will return a Pandas DataFrame. Ichimoku on the other hand
+        Most Indicators will return a cuDF Series. Others like MACD, BBANDS,
+        KC, et al will return a cuDF DataFrame. Ichimoku on the other hand
         will return two DataFrames, the Ichimoku DataFrame for the known period
         and a Span DataFrame for the future of the Span values.
 
     Let's get started!
 
     1. Loading the 'ta' module:
-    >>> import pandas as pd
-    >>> import ta as ta
+    >>> import cudf
+    >>> import pandas_ta as ta
 
     2. Load some data:
-    >>> df = pd.read_csv("AAPL.csv", index_col="date", parse_dates=True)
+    >>> df = cudf.read_csv("AAPL.csv")
 
     3. Help!
     3a. General Help:
@@ -257,9 +257,9 @@ class AnalysisIndicators(BasePandasObject):
         self._last_run = get_time(self._exchange, to_string=True)
 
     @staticmethod
-    def _validate(obj: Tuple[pd.DataFrame, pd.Series]):
-        if not isinstance(obj, pd.DataFrame) and not isinstance(obj, pd.Series):
-            raise AttributeError("[X] Must be either a Pandas Series or DataFrame.")
+    def _validate(obj: Tuple[DataFrame, Series]):
+        if not isinstance(obj, DataFrame) and not isinstance(obj, Series):
+            raise AttributeError("[X] Must be either a cuDF Series or DataFrame.")
 
     # DataFrame Behavioral Methods
     def __call__(
@@ -349,7 +349,7 @@ class AnalysisIndicators(BasePandasObject):
         return hasdf
 
     @property
-    def reverse(self) -> pd.DataFrame:
+    def reverse(self) -> DataFrame:
         """Reverses the DataFrame. Simply: df.iloc[::-1]"""
         return self._df.iloc[::-1]
 
@@ -390,7 +390,7 @@ class AnalysisIndicators(BasePandasObject):
             if "suffix" in kwargs:
                 suffix = f"{delimiter}{kwargs['suffix']}"
 
-            if isinstance(result, pd.Series):
+            if isinstance(result, Series):
                 result.name = prefix + result.name + suffix
             else:
                 result.columns = [prefix + column + suffix for column in result.columns]
@@ -401,11 +401,12 @@ class AnalysisIndicators(BasePandasObject):
             df = self._df
             if df is None or result is None: return
             else:
-                simplefilter(action="ignore", category=pd.errors.PerformanceWarning)
+                # cudf doesn't have PerformanceWarning, skip warning filter
+                pass
                 if "col_names" in kwargs and not isinstance(kwargs["col_names"], tuple):
                     kwargs["col_names"] = (kwargs["col_names"],) # Note: tuple(kwargs["col_names"]) doesn't work
 
-                if isinstance(result, pd.DataFrame):
+                if isinstance(result, DataFrame):
                     # If specified in kwargs, rename the columns.
                     # If not, use the default names.
                     if "col_names" in kwargs and isinstance(kwargs["col_names"], tuple):
@@ -434,8 +435,8 @@ class AnalysisIndicators(BasePandasObject):
         df = self._df
         if df is None: return
 
-        # Explicitly passing a pd.Series to override default.
-        if isinstance(series, pd.Series):
+        # Explicitly passing a cuDF Series to override default.
+        if isinstance(series, Series):
             return series
         # Apply default if no series nor a default.
         elif series is None:
@@ -468,13 +469,13 @@ class AnalysisIndicators(BasePandasObject):
         else:
             return getattr(self, method)(*args, **kwargs)[0]
 
-    def _post_process(self, result, **kwargs) -> Tuple[pd.Series, pd.DataFrame]:
+    def _post_process(self, result, **kwargs) -> Tuple[Series, DataFrame]:
         """Applies any additional modifications to the DataFrame
         * Applies prefixes and/or suffixes
         * Appends the result to main DataFrame
         """
         verbose = kwargs.pop("verbose", False)
-        if not isinstance(result, (pd.Series, pd.DataFrame)):
+        if not isinstance(result, (Series, DataFrame)):
             if verbose:
                 print(f"[X] Oops! The result was not a Series or DataFrame.")
             return self._df
@@ -482,7 +483,7 @@ class AnalysisIndicators(BasePandasObject):
             # Append only specific columns to the dataframe (via
             # 'col_numbers':(0,1,3) for example)
             result = (result.iloc[:, [int(n) for n in kwargs["col_numbers"]]]
-                      if isinstance(result, pd.DataFrame) and
+                      if isinstance(result, DataFrame) and
                       "col_numbers" in kwargs and
                       kwargs["col_numbers"] is not None else result)
             # Add prefix/suffix and append to the dataframe
@@ -585,7 +586,10 @@ class AnalysisIndicators(BasePandasObject):
         ]
 
         # Public non-indicator methods
-        ta_indicators = list((x for x in dir(pd.DataFrame().ta) if not x.startswith("_") and not x.endswith("_")))
+        # Note: cuDF doesn't support register_dataframe_accessor, so we create a dummy DataFrame
+        dummy_df = DataFrame()
+        dummy_df.ta = AnalysisIndicators(dummy_df)
+        ta_indicators = list((x for x in dir(dummy_df.ta) if not x.startswith("_") and not x.endswith("_")))
 
         # Add Pandas TA methods and properties to be removed
         removed = helper_methods + ta_properties
@@ -1752,3 +1756,14 @@ class AnalysisIndicators(BasePandasObject):
         volume = self._get_column(kwargs.pop("volume", "volume"))
         result = vp(close=close, volume=volume, width=width, percent=percent, **kwargs)
         return self._post_process(result, **kwargs)
+
+
+# Register the 'ta' accessor for cuDF DataFrames
+# Since cuDF doesn't support register_dataframe_accessor, we monkey-patch it
+def _get_ta_accessor(self):
+    """Returns the Technical Analysis accessor for cuDF DataFrames"""
+    return AnalysisIndicators(self)
+
+# Add the 'ta' property to cuDF DataFrame class
+if not hasattr(DataFrame, 'ta'):
+    DataFrame.ta = property(_get_ta_accessor)

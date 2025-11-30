@@ -21,6 +21,7 @@ version = __version__ = _dist.version
 
 Imports = {
     "alphaVantage-api": find_spec("alphaVantageAPI") is not None,
+    "cudf": find_spec("cudf") is not None,  # cuDF for GPU-accelerated DataFrames
     "matplotlib": find_spec("matplotlib") is not None,
     "mplfinance": find_spec("mplfinance") is not None,
     "numba": find_spec("numba") is not None,

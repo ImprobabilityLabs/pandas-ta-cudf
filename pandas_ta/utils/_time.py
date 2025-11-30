@@ -3,7 +3,12 @@ from datetime import datetime
 from time import localtime, perf_counter
 from typing import Tuple
 
-from pandas import DataFrame, Timestamp
+from cudf import DataFrame
+# Note: cudf uses datetime64 for timestamps, Timestamp is from pandas
+try:
+    from pandas import Timestamp  # For compatibility with existing code
+except:
+    Timestamp = None
 
 from pandas_ta import EXCHANGE_TZ, RATE
 

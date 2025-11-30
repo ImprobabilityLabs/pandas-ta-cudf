@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from pandas import DataFrame, concat
+from cudf import DataFrame, concat
 from pandas_ta import Imports
 from pandas_ta.overlap import rma
 from pandas_ta.utils import get_drift, get_offset, verify_series, signals
@@ -22,11 +22,12 @@ def rsi(close, length=None, scalar=None, talib=None, drift=None, offset=None, **
         from talib import RSI
         rsi = RSI(close, length)
     else:
-        negative = close.diff(drift)
+        negative = close.diff(periods=drift)
         positive = negative.copy()
 
-        positive[positive < 0] = 0  # Make negatives 0 for the postive series
-        negative[negative > 0] = 0  # Make postives 0 for the negative series
+        # cudf: use where() for conditional assignment
+        positive = positive.where(positive >= 0, 0)  # Make negatives 0 for the positive series
+        negative = negative.where(negative <= 0, 0)  # Make positives 0 for the negative series
 
         positive_avg = rma(positive, length=length)
         negative_avg = rma(negative, length=length)
@@ -38,10 +39,10 @@ def rsi(close, length=None, scalar=None, talib=None, drift=None, offset=None, **
         rsi = rsi.shift(offset)
 
     # Handle fills
+    # cudf: fillna returns new Series, doesn't support inplace or method parameter
     if "fillna" in kwargs:
-        rsi.fillna(kwargs["fillna"], inplace=True)
-    if "fill_method" in kwargs:
-        rsi.fillna(method=kwargs["fill_method"], inplace=True)
+        rsi = rsi.fillna(kwargs["fillna"])
+    # Note: cudf doesn't support fill_method parameter
 
     # Name and Categorize it
     rsi.name = f"RSI_{length}"
@@ -97,7 +98,7 @@ Calculation:
     RSI = scalar * pos_avg / (pos_avg + neg_avg)
 
 Args:
-    close (pd.Series): Series of 'close's
+    close (cudf.Series): Series of 'close's
     length (int): It's period. Default: 14
     scalar (float): How much to magnify. Default: 100
     talib (bool): If TA Lib is installed and talib is True, Returns the TA Lib
@@ -106,9 +107,9 @@ Args:
     offset (int): How many periods to offset the result. Default: 0
 
 Kwargs:
-    fillna (value, optional): pd.DataFrame.fillna(value)
-    fill_method (value, optional): Type of fill method
+    fillna (value, optional): cudf.Series.fillna(value)
+    fill_method (value, optional): Not supported in cuDF
 
 Returns:
-    pd.Series: New feature generated.
+    cudf.Series: New feature generated.
 """

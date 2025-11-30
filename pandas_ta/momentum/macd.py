@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from pandas import concat, DataFrame
+from cudf import concat, DataFrame
 from pandas_ta import Imports
 from pandas_ta.overlap import ema
 from pandas_ta.utils import get_offset, verify_series, signals
@@ -45,14 +45,12 @@ def macd(close, fast=None, slow=None, signal=None, talib=None, offset=None, **kw
         signalma = signalma.shift(offset)
 
     # Handle fills
+    # cudf: fillna returns new Series, doesn't support inplace or method parameter
     if "fillna" in kwargs:
-        macd.fillna(kwargs["fillna"], inplace=True)
-        histogram.fillna(kwargs["fillna"], inplace=True)
-        signalma.fillna(kwargs["fillna"], inplace=True)
-    if "fill_method" in kwargs:
-        macd.fillna(method=kwargs["fill_method"], inplace=True)
-        histogram.fillna(method=kwargs["fill_method"], inplace=True)
-        signalma.fillna(method=kwargs["fill_method"], inplace=True)
+        macd = macd.fillna(kwargs["fillna"])
+        histogram = histogram.fillna(kwargs["fillna"])
+        signalma = signalma.fillna(kwargs["fillna"])
+    # Note: cudf doesn't support fill_method parameter
 
     # Name and Categorize it
     _asmode = "AS" if as_mode else ""
@@ -130,7 +128,7 @@ Calculation:
         Histogram = MACD - Signal
 
 Args:
-    close (pd.Series): Series of 'close's
+    close (cudf.Series): Series of 'close's
     fast (int): The short period. Default: 12
     slow (int): The long period. Default: 26
     signal (int): The signal period. Default: 9
@@ -141,9 +139,9 @@ Args:
 Kwargs:
     asmode (value, optional): When True, enables AS version of MACD.
         Default: False
-    fillna (value, optional): pd.DataFrame.fillna(value)
-    fill_method (value, optional): Type of fill method
+    fillna (value, optional): cudf.Series.fillna(value)
+    fill_method (value, optional): Not supported in cuDF
 
 Returns:
-    pd.DataFrame: macd, histogram, signal columns.
+    cudf.DataFrame: macd, histogram, signal columns.
 """

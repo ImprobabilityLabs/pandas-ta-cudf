@@ -26,10 +26,10 @@ def sma(close, length=None, talib=None, offset=None, **kwargs):
         sma = sma.shift(offset)
 
     # Handle fills
+    # cudf: fillna returns new Series, doesn't support inplace or method parameter
     if "fillna" in kwargs:
-        sma.fillna(kwargs["fillna"], inplace=True)
-    if "fill_method" in kwargs:
-        sma.fillna(method=kwargs["fill_method"], inplace=True)
+        sma = sma.fillna(kwargs["fillna"])
+    # Note: cudf doesn't support fill_method parameter
 
     # Name & Category
     sma.name = f"SMA_{length}"
@@ -53,7 +53,7 @@ Calculation:
     SMA = SUM(close, length) / length
 
 Args:
-    close (pd.Series): Series of 'close's
+    close (cudf.Series): Series of 'close's
     length (int): It's period. Default: 10
     talib (bool): If TA Lib is installed and talib is True, Returns the TA Lib
         version. Default: True
@@ -62,9 +62,9 @@ Args:
 Kwargs:
     adjust (bool): Default: True
     presma (bool, optional): If True, uses SMA for initial value.
-    fillna (value, optional): pd.DataFrame.fillna(value)
-    fill_method (value, optional): Type of fill method
+    fillna (value, optional): cudf.Series.fillna(value)
+    fill_method (value, optional): Not supported in cuDF
 
 Returns:
-    pd.Series: New feature generated.
+    cudf.Series: New feature generated.
 """

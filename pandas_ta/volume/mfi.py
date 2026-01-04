@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from pandas import DataFrame
+from cudf import DataFrame
 from pandas_ta import Imports
 from pandas_ta.overlap import hlc3
 from pandas_ta.utils import get_drift, get_offset, verify_series
@@ -47,9 +47,10 @@ def mfi(high, low, close, volume, length=None, talib=None, drift=None, offset=No
 
     # Handle fills
     if "fillna" in kwargs:
-        mfi.fillna(kwargs["fillna"], inplace=True)
-    if "fill_method" in kwargs:
-        mfi.fillna(method=kwargs["fill_method"], inplace=True)
+        mfi = mfi.fillna(kwargs["fillna"])
+    # Note: cudf doesn't support fill_method parameter
+    # if "fill_method" in kwargs:
+    #     mfi = mfi.fillna(method=kwargs["fill_method"])
 
     # Name and Categorize it
     mfi.name = f"MFI_{length}"

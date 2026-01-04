@@ -29,39 +29,75 @@ def fix_file(filepath):
         changes = []
         
         # 1. Replace pandas imports with cudf
-        # Handle "from pandas import DataFrame, Series"
-        if re.search(r'from pandas import.*DataFrame.*Series', content):
-            content = re.sub(
-                r'from pandas import (DataFrame, Series)',
-                r'from cudf import DataFrame, Series',
-                content
-            )
-            changes.append("Updated DataFrame, Series import")
+        # Handle complex imports first (multiple items)
+        # Pattern: from pandas import DataFrame, Series, concat, etc.
+        pandas_imports_pattern = r'from pandas import\s+([^#\n]+)'
         
-        # Handle "from pandas import DataFrame"
-        if re.search(r'from pandas import.*DataFrame', content) and 'Series' not in content:
-            content = re.sub(
-                r'from pandas import (DataFrame)',
-                r'from cudf import \1',
-                content
-            )
-            changes.append("Updated DataFrame import")
+        def replace_pandas_imports(match):
+            imports_str = match.group(1).strip()
+            # Split by comma and process each import
+            imports = [imp.strip() for imp in imports_str.split(',')]
+            
+            # Items that should stay with pandas (special cases)
+            pandas_only = ['cut', 'date_range', 'RangeIndex', 'Timedelta', 'DatetimeIndex', 'Timestamp']
+            
+            # Separate cudf-compatible and pandas-only imports
+            cudf_imports = []
+            keep_pandas = []
+            
+            for imp in imports:
+                # Remove any inline comments
+                imp = imp.split('#')[0].strip()
+                if imp in pandas_only:
+                    keep_pandas.append(imp)
+                elif imp in ['DataFrame', 'Series', 'concat']:
+                    cudf_imports.append(imp)
+                elif imp not in ['']:
+                    # Unknown import, try to convert
+                    cudf_imports.append(imp)
+            
+            result_lines = []
+            if cudf_imports:
+                result_lines.append(f"from cudf import {', '.join(cudf_imports)}")
+            if keep_pandas:
+                result_lines.append(f"from pandas import {', '.join(keep_pandas)}  # Not available in cudf")
+            
+            return '\n'.join(result_lines) if result_lines else match.group(0)
         
-        # Handle "from pandas import concat"
-        if re.search(r'from pandas import.*concat', content):
-            content = re.sub(
-                r'from pandas import (concat)',
-                r'from cudf import \1',
-                content
-            )
-            changes.append("Updated concat import")
+        # Replace complex imports
+        if re.search(pandas_imports_pattern, content):
+            new_content = re.sub(pandas_imports_pattern, replace_pandas_imports, content)
+            if new_content != content:
+                content = new_content
+                changes.append("Updated pandas imports")
+        
+        # Handle simple single imports
+        content = re.sub(
+            r'^from pandas import DataFrame$',
+            r'from cudf import DataFrame',
+            content,
+            flags=re.MULTILINE
+        )
+        content = re.sub(
+            r'^from pandas import Series$',
+            r'from cudf import Series',
+            content,
+            flags=re.MULTILINE
+        )
+        content = re.sub(
+            r'^from pandas import concat$',
+            r'from cudf import concat',
+            content,
+            flags=re.MULTILINE
+        )
         
         # Handle "import pandas as pd"
-        if re.search(r'import pandas as pd', content):
+        if re.search(r'^import pandas as pd', content, re.MULTILINE):
             content = re.sub(
-                r'import pandas as pd',
+                r'^import pandas as pd',
                 r'import cudf',
-                content
+                content,
+                flags=re.MULTILINE
             )
             changes.append("Updated pandas import")
             # Also replace pd.DataFrame and pd.Series

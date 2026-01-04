@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from pandas_ta.utils import verify_series
 from numpy import nan as npNaN
-from pandas import Series
+from cudf import Series
 
 
 def pvr(close, volume):

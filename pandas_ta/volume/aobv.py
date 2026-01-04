@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from pandas import DataFrame
+from cudf import DataFrame
 from .obv import obv
 from pandas_ta.overlap import ma
 from pandas_ta.trend import long_run, short_run
@@ -42,19 +42,20 @@ def aobv(close, volume, fast=None, slow=None, max_lookback=None, min_lookback=No
         obv_long = obv_long.shift(offset)
         obv_short = obv_short.shift(offset)
 
-    # # Handle fills
+    # Handle fills
     if "fillna" in kwargs:
-        obv_.fillna(kwargs["fillna"], inplace=True)
-        maf.fillna(kwargs["fillna"], inplace=True)
-        mas.fillna(kwargs["fillna"], inplace=True)
-        obv_long.fillna(kwargs["fillna"], inplace=True)
-        obv_short.fillna(kwargs["fillna"], inplace=True)
-    if "fill_method" in kwargs:
-        obv_.fillna(method=kwargs["fill_method"], inplace=True)
-        maf.fillna(method=kwargs["fill_method"], inplace=True)
-        mas.fillna(method=kwargs["fill_method"], inplace=True)
-        obv_long.fillna(method=kwargs["fill_method"], inplace=True)
-        obv_short.fillna(method=kwargs["fill_method"], inplace=True)
+        obv_ = obv_.fillna(kwargs["fillna"])
+        maf = maf.fillna(kwargs["fillna"])
+        mas = mas.fillna(kwargs["fillna"])
+        obv_long = obv_long.fillna(kwargs["fillna"])
+        obv_short = obv_short.fillna(kwargs["fillna"])
+    # Note: cudf doesn't support fill_method parameter
+    # if "fill_method" in kwargs:
+    #     obv_ = obv_.fillna(method=kwargs["fill_method"])
+    #     maf = maf.fillna(method=kwargs["fill_method"])
+    #     mas = mas.fillna(method=kwargs["fill_method"])
+    #     obv_long = obv_long.fillna(method=kwargs["fill_method"])
+    #     obv_short = obv_short.fillna(method=kwargs["fill_method"])
 
     # Prepare DataFrame to return
     _mode = mamode.lower()[0] if len(mamode) else ""

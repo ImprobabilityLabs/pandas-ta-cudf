@@ -34,9 +34,10 @@ def ema(close, length=None, talib=None, offset=None, **kwargs):
 
     # Handle fills
     if "fillna" in kwargs:
-        ema.fillna(kwargs["fillna"], inplace=True)
-    if "fill_method" in kwargs:
-        ema.fillna(method=kwargs["fill_method"], inplace=True)
+        ema = ema.fillna(kwargs["fillna"])
+    # Note: cudf doesn't support fill_method parameter
+    # if "fill_method" in kwargs:
+    #     ema = ema.fillna(method=kwargs["fill_method"])
 
     # Name & Category
     ema.name = f"EMA_{length}"

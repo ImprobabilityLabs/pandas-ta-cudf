@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from pandas import DataFrame, concat
+from cudf import DataFrame, concat
 from pandas_ta.utils import get_drift, get_offset, verify_series, signals
 
 
@@ -26,9 +26,10 @@ def er(close, length=None, drift=None, offset=None, **kwargs):
 
     # Handle fills
     if "fillna" in kwargs:
-        er.fillna(kwargs["fillna"], inplace=True)
-    if "fill_method" in kwargs:
-        er.fillna(method=kwargs["fill_method"], inplace=True)
+        er = er.fillna(kwargs["fillna"])
+    # Note: cudf doesn't support fill_method parameter
+    # if "fill_method" in kwargs:
+    #     er = er.fillna(method=kwargs["fill_method"])
 
     # Name and Categorize it
     er.name = f"ER_{length}"

@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 from numpy import array_split
 from numpy import mean
-from pandas import cut, concat, DataFrame
+from cudf import DataFrame, concat
+from pandas import cut  # cut is not available in cudf, using pandas for this
 from pandas_ta.utils import signed_series, verify_series
 
 
@@ -62,9 +63,10 @@ def vp(close, volume, width=None, **kwargs):
 
     # Handle fills
     if "fillna" in kwargs:
-        vpdf.fillna(kwargs["fillna"], inplace=True)
-    if "fill_method" in kwargs:
-        vpdf.fillna(method=kwargs["fill_method"], inplace=True)
+        vpdf = vpdf.fillna(kwargs["fillna"])
+    # Note: cudf doesn't support fill_method parameter
+    # if "fill_method" in kwargs:
+    #     vpdf = vpdf.fillna(method=kwargs["fill_method"])
 
     # Name and Categorize it
     vpdf.name = f"VP_{width}"

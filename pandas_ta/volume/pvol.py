@@ -21,9 +21,10 @@ def pvol(close, volume, offset=None, **kwargs):
 
     # Handle fills
     if "fillna" in kwargs:
-        pvol.fillna(kwargs["fillna"], inplace=True)
-    if "fill_method" in kwargs:
-        pvol.fillna(method=kwargs["fill_method"], inplace=True)
+        pvol = pvol.fillna(kwargs["fillna"])
+    # Note: cudf doesn't support fill_method parameter
+    # if "fill_method" in kwargs:
+    #     pvol = pvol.fillna(method=kwargs["fill_method"])
 
     # Name and Categorize it
     pvol.name = f"PVOL"

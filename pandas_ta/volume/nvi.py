@@ -19,7 +19,7 @@ def nvi(close, volume, length=None, initial=None, offset=None, **kwargs):
     roc_ = roc(close=close, length=length)
     signed_volume = signed_series(volume, 1)
     nvi = signed_volume[signed_volume < 0].abs() * roc_
-    nvi.fillna(0, inplace=True)
+    nvi = nvi.fillna(0)
     nvi.iloc[0] = initial
     nvi = nvi.cumsum()
 
@@ -29,9 +29,10 @@ def nvi(close, volume, length=None, initial=None, offset=None, **kwargs):
 
     # Handle fills
     if "fillna" in kwargs:
-        nvi.fillna(kwargs["fillna"], inplace=True)
-    if "fill_method" in kwargs:
-        nvi.fillna(method=kwargs["fill_method"], inplace=True)
+        nvi = nvi.fillna(kwargs["fillna"])
+    # Note: cudf doesn't support fill_method parameter
+    # if "fill_method" in kwargs:
+    #     nvi = nvi.fillna(method=kwargs["fill_method"])
 
     # Name and Categorize it
     nvi.name = f"NVI_{length}"

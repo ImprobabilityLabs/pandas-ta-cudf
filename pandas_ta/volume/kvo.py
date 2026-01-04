@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from pandas import DataFrame
+from cudf import DataFrame
 from pandas_ta.overlap import hlc3, ma
 from pandas_ta.utils import get_drift, get_offset, signed_series, verify_series
 
@@ -34,11 +34,12 @@ def kvo(high, low, close, volume, fast=None, slow=None, signal=None, mamode=None
 
     # Handle fills
     if "fillna" in kwargs:
-        kvo.fillna(kwargs["fillna"], inplace=True)
-        kvo_signal.fillna(kwargs["fillna"], inplace=True)
-    if "fill_method" in kwargs:
-        kvo.fillna(method=kwargs["fill_method"], inplace=True)
-        kvo_signal.fillna(method=kwargs["fill_method"], inplace=True)
+        kvo = kvo.fillna(kwargs["fillna"])
+        kvo_signal = kvo_signal.fillna(kwargs["fillna"])
+    # Note: cudf doesn't support fill_method parameter
+    # if "fill_method" in kwargs:
+    #     kvo = kvo.fillna(method=kwargs["fill_method"])
+    #     kvo_signal = kvo_signal.fillna(method=kwargs["fill_method"])
 
     # Name and Categorize it
     _props = f"_{fast}_{slow}_{signal}"

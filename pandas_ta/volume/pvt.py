@@ -21,9 +21,10 @@ def pvt(close, volume, drift=None, offset=None, **kwargs):
 
     # Handle fills
     if "fillna" in kwargs:
-        pvt.fillna(kwargs["fillna"], inplace=True)
-    if "fill_method" in kwargs:
-        pvt.fillna(method=kwargs["fill_method"], inplace=True)
+        pvt = pvt.fillna(kwargs["fillna"])
+    # Note: cudf doesn't support fill_method parameter
+    # if "fill_method" in kwargs:
+    #     pvt = pvt.fillna(method=kwargs["fill_method"])
 
     # Name and Categorize it
     pvt.name = f"PVT"

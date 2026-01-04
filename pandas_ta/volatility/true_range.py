@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from numpy import nan as npNaN
-from pandas import concat
+from cudf import concat
 from pandas_ta import Imports
 from pandas_ta.utils import get_drift, get_offset, non_zero_range, verify_series
 
@@ -33,9 +33,10 @@ def true_range(high, low, close, talib=None, drift=None, offset=None, **kwargs):
 
     # Handle fills
     if "fillna" in kwargs:
-        true_range.fillna(kwargs["fillna"], inplace=True)
-    if "fill_method" in kwargs:
-        true_range.fillna(method=kwargs["fill_method"], inplace=True)
+        true_range = true_range.fillna(kwargs["fillna"])
+    # Note: cudf doesn't support fill_method parameter
+    # if "fill_method" in kwargs:
+    #     true_range = true_range.fillna(method=kwargs["fill_method"])
 
     # Name and Categorize it
     true_range.name = f"TRUERANGE_{drift}"
